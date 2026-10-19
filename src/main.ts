@@ -719,9 +719,9 @@ function drawSign(t: number) {
   ctx.save();
   ctx.globalAlpha = flick ? 0.25 : 1;
   const text = STAGES[stageIdx].sign;
-  ctx.font = '26px Bungee, system-ui, sans-serif';
+  ctx.font = "26px 'Geist Pixel Square', ui-monospace, monospace";
   const fit = Math.min(1, 320 / ctx.measureText(text).width);
-  ctx.font = `${Math.floor(26 * fit)}px Bungee, system-ui, sans-serif`;
+  ctx.font = `${Math.floor(26 * fit)}px 'Geist Pixel Square', ui-monospace, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = `hsl(${neonHue(t)},100%,60%)`;
@@ -895,7 +895,7 @@ function drawFrontPanel(t: number) {
   ctx.shadowColor = '#ffd23a';
   ctx.shadowBlur = flash ? 18 : 0;
   ctx.stroke();
-  ctx.font = '11px Bungee, system-ui, sans-serif';
+  ctx.font = "11px 'Geist Pixel Square', ui-monospace, monospace";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = flash ? '#ffd23a' : 'rgba(234,246,255,0.55)';

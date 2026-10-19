@@ -14,14 +14,16 @@ export interface LevelCfg {
   pity: number;
   /** velocidade da garra (mais rápida = mais difícil mirar) */
   speed: number;
+  /** barras que se mexem: quantas usar da fase, velocidade e largura relativas, e se derrubam a pelúcia */
+  obs: { max: number; speed: number; width: number; knock: boolean };
 }
 
 export const LEVEL_IDS: Level[] = ['facil', 'medio', 'dificil'];
 
 export const LEVELS: Record<Level, LevelCfg> = {
-  facil: { label: 'Fácil', emoji: '🟢', fichas: 10, chance: [0.95, 0.85, 0.6], slip: 0.05, pity: 2, speed: 150 },
-  medio: { label: 'Médio', emoji: '🟡', fichas: 10, chance: [0.85, 0.6, 0.3], slip: 0.15, pity: 4, speed: 175 },
-  dificil: { label: 'Difícil', emoji: '🔴', fichas: 10, chance: [0.7, 0.4, 0.15], slip: 0.25, pity: Infinity, speed: 200 },
+  facil: { label: 'Fácil', emoji: '🟢', fichas: 10, chance: [0.95, 0.85, 0.6], slip: 0.05, pity: 2, speed: 150, obs: { max: 1, speed: 0.45, width: 0.6, knock: false } },
+  medio: { label: 'Médio', emoji: '🟡', fichas: 10, chance: [0.85, 0.6, 0.3], slip: 0.15, pity: 4, speed: 175, obs: { max: 2, speed: 0.75, width: 0.85, knock: true } },
+  dificil: { label: 'Difícil', emoji: '🔴', fichas: 10, chance: [0.7, 0.4, 0.15], slip: 0.25, pity: Infinity, speed: 200, obs: { max: Infinity, speed: 1, width: 1, knock: true } },
 };
 
 export interface Entry {

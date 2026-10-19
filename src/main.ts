@@ -237,11 +237,13 @@ let obsT = 0;
 let bonkT = 0;
 
 function obstacleRects() {
-  return STAGES[stageIdx].obstacles.map((o) => {
-    const L = GR - GL - o.w;
-    let p = (obsT * o.speed + o.phase * 2 * L) % (2 * L);
+  const cfg = LEVELS[level].obs;
+  return STAGES[stageIdx].obstacles.slice(0, cfg.max).map((o) => {
+    const w = Math.round(o.w * cfg.width);
+    const L = GR - GL - w;
+    let p = (obsT * o.speed * cfg.speed + o.phase * 2 * L) % (2 * L);
     if (p > L) p = 2 * L - p;
-    return { x: GL + p, y: o.y, w: o.w, h: 10 };
+    return { x: GL + p, y: o.y, w, h: 10 };
   });
 }
 
@@ -360,7 +362,7 @@ function updateClaw(dt: number) {
       }
       claw.len -= 170 * dt;
       hum = 170;
-      if (claw.held && plushHitsObstacle(claw.held)) {
+      if (claw.held && LEVELS[level].obs.knock && plushHitsObstacle(claw.held)) {
         bonkT = 0.4;
         sfx.bonk();
         release(0);

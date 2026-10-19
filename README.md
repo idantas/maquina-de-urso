@@ -20,6 +20,11 @@ npm run build    # gera dist/
 
 Na Vercel: framework **Vite**, build `npm run build`, output `dist`.
 
+## PWA
+
+Instalável e funciona offline depois da primeira visita (service worker via `vite-plugin-pwa`).
+No iPhone: Safari → Compartilhar → **Adicionar à Tela de Início**. No Android: menu do Chrome → **Instalar app**.
+
 ## Controles
 
 - ◀ ▶ (segurar) move a garra — ou setas do teclado

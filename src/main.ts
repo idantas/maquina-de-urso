@@ -602,10 +602,12 @@ interface Part {
   size: number;
   color: string;
   ring: boolean;
+  /** confete Bauhaus: 0 quadrado, 1 círculo, 2 triângulo */
+  shape: number;
   life: number;
 }
 let parts: Part[] = [];
-const CONFETTI = ['#ff3b6b', '#ffd23a', '#3ab4ff', '#7cff6b', '#b44dff', '#ffffff', '#ff8a1e'];
+const CONFETTI = ['#d7372b', '#f2c12e', '#1f5fa8', '#1e1e1c'];
 
 function burst() {
   const rect = canvas.getBoundingClientRect();
@@ -622,6 +624,7 @@ function burst() {
       size: rand(7, 13),
       color: CONFETTI[i % CONFETTI.length],
       ring: false,
+      shape: i % 3,
       life: 6,
     });
   }
@@ -636,6 +639,7 @@ function burst() {
       size: rand(9, 14),
       color: '#ffd23a',
       ring: true,
+      shape: 0,
       life: 4,
     });
   }
@@ -665,7 +669,20 @@ function updateFx(dt: number) {
       fctx.rotate(p.rot);
       fctx.scale(1, Math.cos(p.rot * 1.7));
       fctx.fillStyle = p.color;
-      fctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      const h = p.size / 2;
+      if (p.shape === 1) {
+        fctx.beginPath();
+        fctx.arc(0, 0, h, 0, TAU);
+        fctx.fill();
+      } else if (p.shape === 2) {
+        fctx.beginPath();
+        fctx.moveTo(0, -h);
+        fctx.lineTo(h, h);
+        fctx.lineTo(-h, h);
+        fctx.fill();
+      } else {
+        fctx.fillRect(-h, -h, p.size, p.size);
+      }
       fctx.restore();
     }
   }
@@ -700,40 +717,67 @@ function drawRing(c: CanvasRenderingContext2D, x: number, y: number, R: number, 
   c.restore();
 }
 
-// estado da placa de neon (falha às vezes, com zumbido)
+// estado da luz-piloto da placa (pisca às vezes)
 let signFlicker = 0;
 let nextFlicker = rand(4, 9);
 
-function neonHue(t: number) {
-  return winT > 0 ? (t * 540) % 360 : STAGES[stageIdx].hue + Math.sin(t * 1.2) * 20;
+// ilustração: paleta Braun (Dieter Rams) + primárias Bauhaus
+const RAMS = {
+  body: '#efeee9',
+  line: '#d3d1ca',
+  ink: '#1e1e1c',
+  alu: '#c4c6c8',
+  aluDark: '#85898e',
+  off: '#dcdad3',
+  orange: '#ee6a1f',
+  green: '#3e9c4b',
+};
+const BAUHAUS = ['#d7372b', '#f2c12e', '#1f5fa8', '#1e1e1c'];
+
+/** Cor da fase, chapada (sem brilho). Na vitória, gira pelas primárias. */
+function stageColor(t: number) {
+  if (winT > 0) return BAUHAUS[Math.floor(t * 8) % 3];
+  return `hsl(${STAGES[stageIdx].hue},72%,48%)`;
 }
 
 function drawCabinet() {
-  rr(ctx, 12, 4, 376, 632, 34);
-  ctx.fillStyle = '#100c18';
+  rr(ctx, 12, 4, 376, 632, 18);
+  ctx.fillStyle = RAMS.body;
   ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = RAMS.line;
+  ctx.stroke();
 }
 
 function drawSign(t: number) {
-  const flick = signFlicker > 0 && Math.floor(t * 30) % 2 === 0;
+  const text = STAGES[stageIdx].sign.toLowerCase();
   ctx.save();
-  ctx.globalAlpha = flick ? 0.25 : 1;
-  const text = STAGES[stageIdx].sign;
-  ctx.font = "26px 'Geist Pixel Square', ui-monospace, monospace";
-  const fit = Math.min(1, 320 / ctx.measureText(text).width);
-  ctx.font = `${Math.floor(26 * fit)}px 'Geist Pixel Square', ui-monospace, monospace`;
-  ctx.textAlign = 'center';
+  ctx.font = "600 26px 'Geist', system-ui, sans-serif";
+  const fit = Math.min(1, 270 / ctx.measureText(text).width);
+  ctx.font = `600 ${Math.floor(26 * fit)}px 'Geist', system-ui, sans-serif`;
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = `hsl(${neonHue(t)},100%,60%)`;
-  ctx.shadowBlur = 16;
-  ctx.fillStyle = '#eaf6ff';
-  ctx.fillText(text, 200, 54);
+  ctx.fillStyle = RAMS.ink;
+  ctx.fillText(text, GL + 2, 56);
+  // número da fase e luz-piloto
+  ctx.font = "500 11px 'Geist', system-ui, sans-serif";
+  ctx.textAlign = 'right';
+  ctx.fillStyle = RAMS.aluDark;
+  ctx.fillText(`${stageIdx + 1}/${STAGES.length}`, GR - 20, 57);
+  const flick = signFlicker > 0 && Math.floor(t * 20) % 2 === 0;
+  ctx.beginPath();
+  ctx.arc(GR - 6, 56, 5, 0, TAU);
+  ctx.fillStyle = flick ? RAMS.off : stageColor(t);
+  ctx.fill();
+  // fio separador
+  ctx.fillStyle = RAMS.line;
+  ctx.fillRect(GL, 80, GR - GL, 1.5);
   ctx.restore();
 }
 
 function drawInterior(t: number) {
   ctx.save();
-  rr(ctx, GL, GT, GR - GL, GB - GT, 10);
+  rr(ctx, GL, GT, GR - GL, GB - GT, 6);
   ctx.clip();
 
   ctx.save();
@@ -742,48 +786,44 @@ function drawInterior(t: number) {
   ctx.restore();
 
   // trilho
-  ctx.fillStyle = '#3a4258';
+  ctx.fillStyle = RAMS.aluDark;
   ctx.fillRect(GL, RAIL_Y - 3, GR - GL, 4);
 
   // buraco do prêmio
-  ctx.fillStyle = '#05030a';
+  ctx.fillStyle = RAMS.ink;
   ctx.fillRect(GL, FLOOR_Y, BARRIER_X - GL, GB - FLOOR_Y);
-  ctx.fillStyle = `hsla(${neonHue(t)},100%,65%,${0.35 + 0.2 * Math.sin(t * 6)})`;
+  ctx.fillStyle = stageColor(t);
   ctx.fillRect(GL, FLOOR_Y, BARRIER_X - GL, 2);
 
   // chão
-  ctx.fillStyle = '#1a1230';
+  ctx.fillStyle = '#3a3936';
   ctx.fillRect(BARRIER_X, FLOOR_Y, GR - BARRIER_X, GB - FLOOR_Y);
 
   for (const p of plushes) if (!p.held) drawPlush(p);
   if (claw.held) drawPlush(claw.held);
 
   drawClaw(t);
-  drawObstacles(t);
+  drawObstacles();
 
   // acrílico
-  ctx.fillStyle = 'rgba(180,220,255,0.14)';
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
   ctx.fillRect(BARRIER_X - 3, BARRIER_TOP, 6, FLOOR_Y - BARRIER_TOP);
   ctx.restore();
+
+  // moldura da janela
+  rr(ctx, GL, GT, GR - GL, GB - GT, 6);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = RAMS.ink;
+  ctx.stroke();
 }
 
-function drawObstacles(t: number) {
-  const hue = neonHue(t) + 180;
-  for (const r of obstacleRects()) {
-    ctx.save();
-    rr(ctx, r.x, r.y, r.w, r.h, r.h / 2);
-    ctx.shadowColor = bonkT > 0 ? '#ffffff' : `hsl(${hue},100%,60%)`;
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = bonkT > 0 ? '#ffffff' : `hsl(${hue},100%,62%)`;
+function drawObstacles() {
+  obstacleRects().forEach((r, i) => {
+    rr(ctx, r.x, r.y, r.w, r.h, 2);
+    ctx.fillStyle = bonkT > 0 ? RAMS.ink : BAUHAUS[i % 2 ? 2 : 0];
     ctx.fill();
-    ctx.shadowBlur = 0;
-    rr(ctx, r.x + 3, r.y + 3, r.w - 6, r.h - 6, (r.h - 6) / 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.fill();
-    ctx.restore();
-  }
+  });
 }
-
 function drawPlush(p: Plush) {
   const sp = sprites.get(p.char);
   if (!sp) return;
@@ -796,29 +836,28 @@ function drawPlush(p: Plush) {
   ctx.restore();
 }
 
+
 function drawClaw(t: number) {
   const hx = hubX();
   const hy = hubY();
 
   // carrinho no trilho
-  rr(ctx, claw.x - 20, RAIL_Y - 12, 40, 20, 5);
-  ctx.fillStyle = '#3a3f4f';
+  rr(ctx, claw.x - 20, RAIL_Y - 12, 40, 20, 3);
+  ctx.fillStyle = RAMS.alu;
   ctx.fill();
-  ctx.strokeStyle = '#8d96aa';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = RAMS.aluDark;
+  ctx.lineWidth = 1;
   ctx.stroke();
+  // luz-piloto: verde parado, laranja trabalhando
   const busy = claw.state !== 'idle';
   ctx.beginPath();
   ctx.arc(claw.x, RAIL_Y - 2, 3, 0, TAU);
-  ctx.fillStyle = busy ? (Math.floor(t * 8) % 2 ? '#ff3b47' : '#5a1218') : '#5dff8a';
-  ctx.shadowColor = ctx.fillStyle;
-  ctx.shadowBlur = 8;
+  ctx.fillStyle = busy ? (Math.floor(t * 8) % 2 ? RAMS.orange : RAMS.off) : RAMS.green;
   ctx.fill();
-  ctx.shadowBlur = 0;
 
   // cabo
-  ctx.strokeStyle = '#9aa3b5';
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = RAMS.ink;
+  ctx.lineWidth = 1.2;
   for (const o of [-2, 2]) {
     ctx.beginPath();
     ctx.moveTo(claw.x + o, RAIL_Y + 8);
@@ -830,18 +869,13 @@ function drawClaw(t: number) {
   const th = 0.25 + 0.6 * claw.open;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  const arm = (pts: number[][], dark: string, light: string) => {
-    for (const [lw, col] of [
-      [7, dark],
-      [3.5, light],
-    ] as const) {
-      ctx.beginPath();
-      ctx.moveTo(pts[0][0], pts[0][1]);
-      for (const q of pts.slice(1)) ctx.lineTo(q[0], q[1]);
-      ctx.lineWidth = lw;
-      ctx.strokeStyle = col;
-      ctx.stroke();
-    }
+  const arm = (pts: number[][], col: string) => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (const q of pts.slice(1)) ctx.lineTo(q[0], q[1]);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = col;
+    ctx.stroke();
   };
   // dente do meio (atrás)
   arm(
@@ -850,8 +884,7 @@ function drawClaw(t: number) {
       [hx, hy + 24 + (1 - claw.open) * 4],
       [hx + 4, hy + 40],
     ],
-    '#22262f',
-    '#7c8597',
+    RAMS.aluDark,
   );
   for (const s of [-1, 1]) {
     const bx = hx + s * 8;
@@ -867,73 +900,67 @@ function drawClaw(t: number) {
         [x1, y1],
         [x2, y2],
       ],
-      '#2a2f3a',
-      '#cdd5e2',
+      RAMS.ink,
     );
   }
 
   // cubo central
-  const hg = ctx.createLinearGradient(hx - 11, 0, hx + 11, 0);
-  hg.addColorStop(0, '#6c7588');
-  hg.addColorStop(0.45, '#eef2f8');
-  hg.addColorStop(1, '#5a6274');
-  rr(ctx, hx - 11, hy - 14, 22, 18, 5);
-  ctx.fillStyle = hg;
+  rr(ctx, hx - 11, hy - 14, 22, 18, 3);
+  ctx.fillStyle = RAMS.alu;
   ctx.fill();
-  ctx.strokeStyle = '#2a2f3a';
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = RAMS.aluDark;
+  ctx.lineWidth = 1;
   ctx.stroke();
 }
 
 function drawFrontPanel(t: number) {
-  // porta do prêmio: só um contorno que acende na vitória
+  // porta do prêmio: tampa com rótulo, acende laranja na vitória
   const flash = winT > 0 && Math.floor(t * 10) % 2 === 0;
-  rr(ctx, GL, GB + 18, 82, 36, 8);
+  rr(ctx, GL, GB + 18, 82, 36, 4);
   ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = flash ? '#ffd23a' : 'rgba(234,246,255,0.35)';
-  ctx.shadowColor = '#ffd23a';
-  ctx.shadowBlur = flash ? 18 : 0;
-  ctx.stroke();
-  ctx.font = "11px 'Geist Pixel Square', ui-monospace, monospace";
+  ctx.fillStyle = flash ? RAMS.orange : RAMS.off;
+  ctx.fill();
+  ctx.font = "500 11px 'Geist', system-ui, sans-serif";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = flash ? '#ffd23a' : 'rgba(234,246,255,0.55)';
-  ctx.fillText('PRÊMIO', GL + 41, GB + 37);
+  ctx.fillStyle = flash ? '#ffffff' : RAMS.aluDark;
+  ctx.fillText('prêmio', GL + 41, GB + 37);
   ctx.restore();
+
+  // grade de alto-falante (furos em grade, como no rádio T3)
+  ctx.fillStyle = RAMS.line;
+  for (let y = GB + 22; y <= GB + 50; y += 7) {
+    for (let x = GR - 120; x <= GR - 4; x += 7) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.6, 0, TAU);
+      ctx.fill();
+    }
+  }
 }
 
-// neon só nas laterais, com uma luz correndo pelo tubo
-function drawNeon(t: number) {
-  const hue = neonHue(t);
-  const blink = winT > 0 ? (Math.floor(t * 12) % 2 ? 1 : 0.45) : 0.85 + 0.15 * Math.sin(t * 3);
+// luzes nas laterais: uma coluna de pontos com uma luz correndo
+function drawLights(t: number) {
   const top = 24;
   const bottom = 616;
-  ctx.save();
-  ctx.lineCap = 'round';
-  for (const x of [20, 380]) {
-    ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x, bottom);
-    ctx.shadowColor = `hsl(${hue},100%,60%)`;
-    ctx.shadowBlur = 24;
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = `hsla(${hue},100%,58%,${blink})`;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = `hsla(${hue},100%,90%,${blink})`;
-    ctx.stroke();
-    ctx.setLineDash([16, 60]);
-    ctx.lineDashOffset = (x < 200 ? -1 : 1) * t * (winT > 0 ? 420 : 120);
-    ctx.lineWidth = 3.5;
-    ctx.shadowColor = `hsl(${hue},100%,75%)`;
-    ctx.shadowBlur = 12;
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.stroke();
-    ctx.setLineDash([]);
+  const step = 14;
+  const n = Math.floor((bottom - top) / step) + 1;
+  const speed = winT > 0 ? 40 : 9;
+  for (const [x, dir] of [
+    [20, -1],
+    [380, 1],
+  ]) {
+    for (let i = 0; i < n; i++) {
+      const head = (((dir * t * speed) % n) + n) % n;
+      const d = (i - head + n) % n;
+      let col = RAMS.off;
+      if (winT > 0) col = BAUHAUS[(i + Math.floor(t * 12)) % 3];
+      else if (d < 4) col = stageColor(t);
+      ctx.beginPath();
+      ctx.arc(x, top + i * step, 3.2, 0, TAU);
+      ctx.fillStyle = col;
+      ctx.fill();
+    }
   }
-  ctx.restore();
 }
 
 function render(t: number) {
@@ -943,7 +970,7 @@ function render(t: number) {
   drawCabinet();
   drawInterior(t);
   drawFrontPanel(t);
-  drawNeon(t);
+  drawLights(t);
   drawSign(t);
 }
 
@@ -971,7 +998,6 @@ function frame(now: number) {
   if (nextFlicker <= 0) {
     signFlicker = 0.35;
     nextFlicker = rand(6, 12);
-    if (started) sfx.buzz();
   }
 
   render(time);

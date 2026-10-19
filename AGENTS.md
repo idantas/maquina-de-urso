@@ -21,8 +21,13 @@ Leia as regras em `../anticaos-ui/AGENTS.md` antes de mexer nela.
 ## Fora do design system: ilustração
 
 A máquina e tudo que imita objeto físico têm cor própria e **não** seguem os tokens:
-canvas (`main.ts`, `characters.ts`, `backgrounds.ts`), neon, alavanca, botão PEGAR e a
+canvas (`main.ts`, `characters.ts`, `backgrounds.ts`), luzes laterais, alavanca, botão PEGAR e a
 comemoração de vitória. No CSS, esses trechos estão marcados com o comentário `ilustração`.
+
+A linguagem dessas partes é **Dieter Rams / Braun + Bauhaus**: corpo off-white chapado, alumínio,
+preto, sem brilho nem degradê; laranja Braun só no que se aperta (botão, manopla, porta do prêmio
+na vitória); luzes-piloto redondas; textos em minúscula com Geist. As primárias Bauhaus (vermelho,
+amarelo, azul) ficam nos obstáculos e na comemoração. Paleta em `RAMS` e `BAUHAUS` no `main.ts`.
 
 ## Antes de entregar
 

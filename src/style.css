@@ -132,7 +132,7 @@ button {
   padding: 4px 28px calc(14px + env(safe-area-inset-bottom));
 }
 
-/* ilustração: alavanca de arcade — arraste (ou toque de um lado) pra mover */
+/* ilustração: alavanca no estilo Braun — base de alumínio, haste preta, manopla laranja */
 .stick {
   position: relative;
   width: 128px;
@@ -148,18 +148,18 @@ button {
   height: 30px;
   margin-left: -46px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 35%, #2a2a2e, #0c0c0e);
-  box-shadow: 0 0 0 1px var(--border), var(--shadow-lg);
+  background: #efeee9;
+  box-shadow: inset 0 0 0 1.5px #d3d1ca, 0 3px 0 #c4c6c8;
 }
 .stick-shaft {
   position: absolute;
   left: 50%;
   bottom: 22px;
-  width: 10px;
-  height: 66px;
-  margin-left: -5px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #5d6678, #eef2f8 45%, #5a6274);
+  width: 8px;
+  height: 64px;
+  margin-left: -4px;
+  border-radius: 4px;
+  background: #1e1e1c;
   transform-origin: 50% 100%;
   transition: transform 0.18s var(--ease-spring);
 }
@@ -170,46 +170,47 @@ button {
   position: absolute;
   top: -30px;
   left: 50%;
-  width: 46px;
-  height: 46px;
-  margin-left: -23px;
+  width: 42px;
+  height: 42px;
+  margin-left: -21px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #b8e4ff, #2f8dff 45%, #0b2f8a 100%);
-  box-shadow: 0 0 18px rgba(58, 180, 255, 0.45), inset 0 -5px 10px rgba(0, 0, 0, 0.35);
+  background: #ee6a1f;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.14);
 }
 
-/* ilustração: botão de arcade */
+/* ilustração: botão de pegar — tecla redonda e chapada, como na calculadora ET66 */
 .grab {
   width: 104px;
   height: 104px;
   border-radius: 50%;
-  border: 5px solid #2a0d12;
-  background: radial-gradient(circle at 35% 28%, #ff9a9a, #e3162b 45%, #7a0412 100%);
+  border: 8px solid #efeee9;
+  background: #ee6a1f;
   color: #fff;
-  font-family: var(--font-pixel);
+  font-family: var(--font-sans);
   font-size: var(--text-lg);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  font-weight: var(--font-weight-semibold);
+  text-transform: lowercase;
   box-shadow:
-    0 0 0 4px rgba(255, 77, 109, 0.3),
-    0 0 22px rgba(255, 45, 85, 0.7),
-    inset 0 -8px 14px rgba(0, 0, 0, 0.4);
-  animation: pulse 1.4s var(--ease-pulse) infinite;
-  transition: transform 0.08s, filter var(--duration-base);
+    0 0 0 1.5px #d3d1ca,
+    inset 0 -5px 0 rgba(0, 0, 0, 0.14);
+  animation: pulse 1.8s var(--ease-pulse) infinite;
+  transition: transform 0.08s, background var(--duration-base);
 }
 .grab.active {
-  transform: scale(0.92);
+  transform: scale(0.95);
+  box-shadow: 0 0 0 1.5px #d3d1ca, inset 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 .grab.off {
-  filter: grayscale(0.7) brightness(0.6);
+  background: #b9b7b0;
   animation: none;
 }
 
 @keyframes pulse {
   50% {
     box-shadow:
-      0 0 0 7px rgba(255, 77, 109, 0.22),
-      0 0 36px rgba(255, 45, 85, 0.8),
-      inset 0 -8px 14px rgba(0, 0, 0, 0.4);
+      0 0 0 1.5px #d3d1ca,
+      0 0 0 7px rgba(238, 106, 31, 0.28),
+      inset 0 -5px 0 rgba(0, 0, 0, 0.14);
   }
 }
 

@@ -283,7 +283,8 @@ button {
   backdrop-filter: blur(var(--blur-xs));
   -webkit-backdrop-filter: blur(var(--blur-xs));
 }
-.overlay.hidden {
+.overlay.hidden,
+.update.hidden {
   display: none;
 }
 .overlay.top {
@@ -578,6 +579,30 @@ button {
   height: 100vh;
   z-index: var(--z-popover);
   pointer-events: none;
+}
+
+/* aviso de versão nova (src/pwa.ts) */
+.update {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--spacing) * 3);
+  left: 0;
+  right: 0;
+  width: fit-content;
+  margin: 0 auto;
+  z-index: var(--z-popover);
+  padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 4);
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  box-shadow: var(--shadow-glass);
+  animation: pop var(--duration-moderate) var(--ease-out);
+}
+.update:active {
+  transform: scale(0.97);
 }
 
 @keyframes pop {

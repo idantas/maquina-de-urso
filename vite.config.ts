@@ -4,7 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
+      // nova versão espera o toque em "atualizar" (src/pwa.ts)
+      registerType: 'prompt',
       includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Máquina de Urso',

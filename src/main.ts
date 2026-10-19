@@ -1,4 +1,5 @@
 import './style.css';
+import './pwa';
 import { CHAR_COLORS, CHAR_IDS, CHAR_NAMES, SPRITE_BOX, makeSilhouette, makeSprite, type CharId } from './characters';
 import { STAGES, loadStage, loadUnlocked, saveStage, saveUnlocked } from './stages';
 import { drawBg } from './backgrounds';

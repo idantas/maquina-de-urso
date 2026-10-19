@@ -741,11 +741,25 @@ function stageColor(t: number) {
 }
 
 function drawCabinet() {
+  // gabinete de chapa pintada: luz de cima, sombra no chão
   rr(ctx, 12, 4, 376, 632, 18);
-  ctx.fillStyle = RAMS.body;
+  const g = ctx.createLinearGradient(0, 4, 0, 636);
+  g.addColorStop(0, '#f8f7f3');
+  g.addColorStop(1, '#e2e1db');
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 4;
+  ctx.fillStyle = g;
   ctx.fill();
+  ctx.restore();
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = RAMS.line;
+  ctx.stroke();
+  // chanfro: brilho na borda de cima
+  rr(ctx, 14, 6, 372, 628, 16);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
   ctx.stroke();
 }
 
@@ -786,8 +800,12 @@ function drawInterior(t: number) {
   ctx.restore();
 
   // trilho
-  ctx.fillStyle = RAMS.aluDark;
-  ctx.fillRect(GL, RAIL_Y - 3, GR - GL, 4);
+  const rg = ctx.createLinearGradient(0, RAIL_Y - 4, 0, RAIL_Y + 2);
+  rg.addColorStop(0, '#6f7378');
+  rg.addColorStop(0.4, '#eef0f1');
+  rg.addColorStop(1, '#55595e');
+  ctx.fillStyle = rg;
+  ctx.fillRect(GL, RAIL_Y - 4, GR - GL, 6);
 
   // buraco do prêmio
   ctx.fillStyle = RAMS.ink;
@@ -815,6 +833,21 @@ function drawInterior(t: number) {
   ctx.lineWidth = 3;
   ctx.strokeStyle = RAMS.ink;
   ctx.stroke();
+  // vidro: reflexo diagonal e moldura chanfrada
+  ctx.save();
+  rr(ctx, GL, GT, GR - GL, GB - GT, 6);
+  ctx.clip();
+  const gl = ctx.createLinearGradient(GL, GT, GL + 160, GT + 260);
+  gl.addColorStop(0, 'rgba(255,255,255,0.16)');
+  gl.addColorStop(0.5, 'rgba(255,255,255,0.04)');
+  gl.addColorStop(0.51, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(GL, GT, GR - GL, GB - GT);
+  ctx.restore();
+  rr(ctx, GL - 2.5, GT - 2.5, GR - GL + 5, GB - GT + 5, 8);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.stroke();
 }
 
 function drawObstacles() {
@@ -837,54 +870,150 @@ function drawPlush(p: Plush) {
 }
 
 
+/** Degradê de metal escovado na horizontal (cilindro visto de frente). */
+function metalH(x0: number, x1: number, dark = '#6f7378', light = '#f4f5f6') {
+  const g = ctx.createLinearGradient(x0, 0, x1, 0);
+  g.addColorStop(0, dark);
+  g.addColorStop(0.38, light);
+  g.addColorStop(0.62, '#c4c6c8');
+  g.addColorStop(1, dark);
+  return g;
+}
+
+/** Parafuso de cabeça redonda com fenda. */
+function screw(x: number, y: number, r = 2.2) {
+  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, r);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.6, '#b9bcbf');
+  g.addColorStop(1, '#6f7378');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.6, y + r * 0.3);
+  ctx.lineTo(x + r * 0.6, y - r * 0.3);
+  ctx.stroke();
+}
+
+/** LED redondo com cúpula de acrílico. */
+function led(x: number, y: number, r: number, on: string | null) {
+  ctx.save();
+  if (on) {
+    ctx.shadowColor = on;
+    ctx.shadowBlur = 7;
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fillStyle = on ?? '#d6d4cd';
+  ctx.fill();
+  ctx.restore();
+  // sombra da cúpula embaixo, brilho em cima
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.45, 0, x, y, r);
+  g.addColorStop(0, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.12)');
+  g.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+}
+
 function drawClaw(t: number) {
   const hx = hubX();
   const hy = hubY();
 
-  // carrinho no trilho
-  rr(ctx, claw.x - 20, RAIL_Y - 12, 40, 20, 3);
-  ctx.fillStyle = RAMS.alu;
-  ctx.fill();
-  ctx.strokeStyle = RAMS.aluDark;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // luz-piloto: verde parado, laranja trabalhando
-  const busy = claw.state !== 'idle';
-  ctx.beginPath();
-  ctx.arc(claw.x, RAIL_Y - 2, 3, 0, TAU);
-  ctx.fillStyle = busy ? (Math.floor(t * 8) % 2 ? RAMS.orange : RAMS.off) : RAMS.green;
-  ctx.fill();
-
-  // cabo
-  ctx.strokeStyle = RAMS.ink;
-  ctx.lineWidth = 1.2;
-  for (const o of [-2, 2]) {
+  // cabo de aço trançado
+  for (const o of [-2.2, 2.2]) {
     ctx.beginPath();
     ctx.moveTo(claw.x + o, RAIL_Y + 8);
-    ctx.lineTo(hx + o, hy - 12);
+    ctx.lineTo(hx + o, hy - 14);
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#4f5257';
     ctx.stroke();
+    ctx.setLineDash([1.6, 1.6]);
+    ctx.lineDashOffset = hy * 0.5;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#e4e6e8';
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  // garras
+  // carrinho de alumínio no trilho
+  const cy = RAIL_Y - 13;
+  const cg = ctx.createLinearGradient(0, cy, 0, cy + 22);
+  cg.addColorStop(0, '#f4f5f6');
+  cg.addColorStop(0.5, '#c9cbce');
+  cg.addColorStop(1, '#8d9196');
+  rr(ctx, claw.x - 22, cy, 44, 22, 4);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 5;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = cg;
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = '#6f7378';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillRect(claw.x - 19, cy + 1.5, 38, 1);
+  screw(claw.x - 15, cy + 11);
+  screw(claw.x + 15, cy + 11);
+  // luz-piloto: verde parado, laranja trabalhando
+  const busy = claw.state !== 'idle';
+  led(claw.x, cy + 11, 3.4, busy ? (Math.floor(t * 8) % 2 ? RAMS.orange : null) : RAMS.green);
+
+  // garras: aço com articulação aparafusada e ponta de borracha
   const th = 0.25 + 0.6 * claw.open;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  const arm = (pts: number[][], col: string) => {
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    for (const q of pts.slice(1)) ctx.lineTo(q[0], q[1]);
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = col;
+  const arm = (pts: number[][], shade: number) => {
+    const path = () => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (const q of pts.slice(1)) ctx.lineTo(q[0], q[1]);
+    };
+    path();
+    ctx.lineWidth = 6.5;
+    ctx.strokeStyle = '#3c3f44';
     ctx.stroke();
+    path();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = shade ? '#a9adb2' : '#d3d6d9';
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(-0.9, -0.6);
+    path();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.stroke();
+    ctx.restore();
+    const [jx, jy] = pts[1];
+    screw(jx, jy, 2.6);
+    const [tx, ty] = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(tx, ty, 3.4, 0, TAU);
+    ctx.fillStyle = '#232321';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(tx - 1, ty - 1, 1.1, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fill();
   };
-  // dente do meio (atrás)
+  // dente do meio (atrás, mais escuro)
   arm(
     [
       [hx, hy + 2],
       [hx, hy + 24 + (1 - claw.open) * 4],
       [hx + 4, hy + 40],
     ],
-    RAMS.aluDark,
+    1,
   );
   for (const s of [-1, 1]) {
     const bx = hx + s * 8;
@@ -900,45 +1029,68 @@ function drawClaw(t: number) {
         [x1, y1],
         [x2, y2],
       ],
-      RAMS.ink,
+      0,
     );
   }
 
-  // cubo central
-  rr(ctx, hx - 11, hy - 14, 22, 18, 3);
-  ctx.fillStyle = RAMS.alu;
+  // cubo central: cilindro de metal com anel e rebites
+  rr(ctx, hx - 12, hy - 16, 24, 20, 4);
+  ctx.fillStyle = metalH(hx - 12, hx + 12);
   ctx.fill();
-  ctx.strokeStyle = RAMS.aluDark;
+  ctx.strokeStyle = '#5c6065';
   ctx.lineWidth = 1;
   ctx.stroke();
+  ctx.fillStyle = metalH(hx - 13, hx + 13, '#4f5257', '#c9cbce');
+  ctx.fillRect(hx - 13, hy - 1, 26, 4);
+  screw(hx - 6, hy - 9, 1.6);
+  screw(hx + 6, hy - 9, 1.6);
 }
 
 function drawFrontPanel(t: number) {
-  // porta do prêmio: tampa com rótulo, acende laranja na vitória
+  // porta do prêmio: aba basculante embutida, acende laranja na vitória
   const flash = winT > 0 && Math.floor(t * 10) % 2 === 0;
-  rr(ctx, GL, GB + 18, 82, 36, 4);
-  ctx.save();
-  ctx.fillStyle = flash ? RAMS.orange : RAMS.off;
+  const x = GL;
+  const y = GB + 18;
+  rr(ctx, x, y, 82, 36, 5);
+  const g = ctx.createLinearGradient(0, y, 0, y + 36);
+  g.addColorStop(0, flash ? '#c4500f' : '#a9a7a0');
+  g.addColorStop(0.18, flash ? RAMS.orange : '#d6d4cd');
+  g.addColorStop(1, flash ? '#ff9a5c' : '#e9e8e3');
+  ctx.fillStyle = g;
   ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // borda de baixo pega luz
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillRect(x + 4, y + 35, 74, 1);
+  ctx.save();
   ctx.font = "500 11px 'Geist', system-ui, sans-serif";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = flash ? '#ffffff' : RAMS.aluDark;
-  ctx.fillText('prêmio', GL + 41, GB + 37);
+  // rótulo gravado: sombra clara embaixo
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('prêmio', x + 41, y + 20);
+  ctx.fillStyle = flash ? '#ffffff' : '#76746d';
+  ctx.fillText('prêmio', x + 41, y + 19);
   ctx.restore();
 
-  // grade de alto-falante (furos em grade, como no rádio T3)
-  ctx.fillStyle = RAMS.line;
-  for (let y = GB + 22; y <= GB + 50; y += 7) {
-    for (let x = GR - 120; x <= GR - 4; x += 7) {
+  // grade de alto-falante: furos com sombra dentro e luz na borda de baixo
+  for (let yy = GB + 22; yy <= GB + 50; yy += 7) {
+    for (let xx = GR - 120; xx <= GR - 4; xx += 7) {
       ctx.beginPath();
-      ctx.arc(x, y, 1.6, 0, TAU);
+      ctx.arc(xx, yy + 0.6, 1.8, 0, TAU);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(xx, yy, 1.8, 0, TAU);
+      ctx.fillStyle = '#56544f';
       ctx.fill();
     }
   }
 }
 
-// luzes nas laterais: uma coluna de pontos com uma luz correndo
+// luzes nas laterais: LEDs com uma luz correndo
 function drawLights(t: number) {
   const top = 24;
   const bottom = 616;
@@ -949,16 +1101,13 @@ function drawLights(t: number) {
     [20, -1],
     [380, 1],
   ]) {
+    const head = (((dir * t * speed) % n) + n) % n;
     for (let i = 0; i < n; i++) {
-      const head = (((dir * t * speed) % n) + n) % n;
       const d = (i - head + n) % n;
-      let col = RAMS.off;
+      let col: string | null = null;
       if (winT > 0) col = BAUHAUS[(i + Math.floor(t * 12)) % 3];
       else if (d < 4) col = stageColor(t);
-      ctx.beginPath();
-      ctx.arc(x, top + i * step, 3.2, 0, TAU);
-      ctx.fillStyle = col;
-      ctx.fill();
+      led(x, top + i * step, 3.4, col);
     }
   }
 }

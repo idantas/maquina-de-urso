@@ -132,34 +132,41 @@ button {
   padding: 4px 28px calc(14px + env(safe-area-inset-bottom));
 }
 
-/* ilustração: alavanca no estilo Braun — base de alumínio, haste preta, manopla laranja */
+/* ilustração: alavanca de arcade — base de alumínio escovado, haste cromada, manopla laranja brilhante */
 .stick {
   position: relative;
   width: 128px;
-  height: 120px;
+  height: 124px;
   touch-action: none;
   cursor: grab;
 }
 .stick-base {
   position: absolute;
   left: 50%;
-  bottom: 8px;
-  width: 92px;
-  height: 30px;
-  margin-left: -46px;
+  bottom: 6px;
+  width: 100px;
+  height: 36px;
+  margin-left: -50px;
   border-radius: 50%;
-  background: #efeee9;
-  box-shadow: inset 0 0 0 1.5px #d3d1ca, 0 3px 0 #c4c6c8;
+  background:
+    radial-gradient(ellipse 22% 26% at 50% 46%, #1b1b1a 0 55%, #3a3a37 75%, transparent 78%),
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.08) 0 2deg, rgba(0, 0, 0, 0.04) 2deg 4deg),
+    radial-gradient(ellipse at 50% 35%, #fbfbfa, #d9dadc 45%, #a3a6aa 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.25),
+    0 4px 0 #8d9196,
+    0 9px 14px rgba(0, 0, 0, 0.55);
 }
 .stick-shaft {
   position: absolute;
   left: 50%;
-  bottom: 22px;
-  width: 8px;
-  height: 64px;
-  margin-left: -4px;
+  bottom: 24px;
+  width: 9px;
+  height: 66px;
+  margin-left: -4.5px;
   border-radius: 4px;
-  background: #1e1e1c;
+  background: linear-gradient(90deg, #4a4d52, #f6f7f8 38%, #b9bcbf 60%, #4a4d52);
   transform-origin: 50% 100%;
   transition: transform 0.18s var(--ease-spring);
 }
@@ -168,49 +175,99 @@ button {
 }
 .stick-ball {
   position: absolute;
-  top: -30px;
+  top: -34px;
   left: 50%;
-  width: 42px;
-  height: 42px;
-  margin-left: -21px;
+  width: 48px;
+  height: 48px;
+  margin-left: -24px;
   border-radius: 50%;
-  background: #ee6a1f;
-  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.14);
+  background: radial-gradient(circle at 36% 30%, #ffd9bf 0, #ff9a5c 14%, #ee6a1f 42%, #b8470e 78%, #7a2c06 100%);
+  box-shadow:
+    inset -4px -6px 10px rgba(80, 20, 0, 0.35),
+    0 6px 10px rgba(0, 0, 0, 0.45);
+}
+.stick-ball::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 11px;
+  width: 15px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+  transform: rotate(-30deg);
 }
 
-/* ilustração: botão de pegar — tecla redonda e chapada, como na calculadora ET66 */
+/* ilustração: botão de arcade — aro de alumínio, capa convexa laranja, afunda ao apertar */
 .grab {
-  width: 104px;
-  height: 104px;
+  position: relative;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
-  border: 8px solid #efeee9;
-  background: #ee6a1f;
+  border: none;
+  padding: 0;
+  background: radial-gradient(circle at 50% 30%, #fbfbfa, #d3d5d8 55%, #8d9196 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25),
+    0 5px 0 #7d8186,
+    0 12px 18px rgba(0, 0, 0, 0.55);
   color: #fff;
   font-family: var(--font-sans);
   font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   text-transform: lowercase;
+}
+/* poço escuro onde a capa encaixa */
+.grab::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #1b1b1a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+/* capa */
+.grab::after {
+  content: 'pegar';
+  position: absolute;
+  inset: 12px 12px 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 28%, #ffd2b3 0, #ff9a5c 18%, #ee6a1f 50%, #c4500f 85%, #9a3a08 100%);
   box-shadow:
-    0 0 0 1.5px #d3d1ca,
-    inset 0 -5px 0 rgba(0, 0, 0, 0.14);
+    inset 0 2px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -5px 8px rgba(90, 25, 0, 0.45),
+    0 4px 0 #8a3306,
+    0 5px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 -1px 0 rgba(120, 40, 0, 0.6), 0 1px 0 rgba(255, 220, 190, 0.4);
+  transition: transform 0.06s, box-shadow 0.06s, filter var(--duration-base);
   animation: pulse 1.8s var(--ease-pulse) infinite;
-  transition: transform 0.08s, background var(--duration-base);
 }
-.grab.active {
-  transform: scale(0.95);
-  box-shadow: 0 0 0 1.5px #d3d1ca, inset 0 2px 0 rgba(0, 0, 0, 0.18);
+.grab {
+  font-size: 0;
 }
-.grab.off {
-  background: #b9b7b0;
+.grab::after {
+  font-size: var(--text-lg);
+}
+.grab.active::after {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -3px 6px rgba(90, 25, 0, 0.5),
+    0 1px 0 #8a3306,
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.grab.off::after {
+  filter: grayscale(0.85) brightness(0.85);
   animation: none;
 }
 
+/* luz interna "respirando" na capa, convidando a apertar */
 @keyframes pulse {
   50% {
-    box-shadow:
-      0 0 0 1.5px #d3d1ca,
-      0 0 0 7px rgba(238, 106, 31, 0.28),
-      inset 0 -5px 0 rgba(0, 0, 0, 0.14);
+    filter: brightness(1.12) saturate(1.1);
   }
 }
 

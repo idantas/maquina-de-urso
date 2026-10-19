@@ -1,6 +1,7 @@
 import './style.css';
 import { CHAR_COLORS, CHAR_IDS, CHAR_NAMES, SPRITE_BOX, makeSprite, type CharId } from './characters';
 import { Sfx } from './audio';
+import { LEVELS, LEVEL_IDS, addEntry, loadLevel, loadName, loadRank, saveLevel, saveName, type Level } from './rank';
 
 // ---------- layout lógico da máquina (escalado pra tela) ----------
 const W = 400;
@@ -196,7 +197,7 @@ function physicsStep(dt: number) {
 
   // caiu no buraco = prêmio!
   const won = plushes.filter((p) => !p.held && p.x < BARRIER_X && p.y - p.r > FLOOR_Y + 6);
-  if (won.length && !started) {
+  if (won.length && !playing) {
     // antes do jogo começar não vale: devolve pro alto da pilha
     for (const p of won) {
       p.x = GR - p.r - 10;
@@ -248,14 +249,14 @@ function prepareGrab() {
     }
   }
   if (!best) return;
-  // chances generosas — é pra criança se divertir
+  const cfg = LEVELS[level];
   const q = bestD / best.r;
-  const pity = missStreak >= 2;
-  const chance = pity ? 1 : q < 0.35 ? 0.92 : q < 0.6 ? 0.72 : 0.42;
+  const pity = missStreak >= cfg.pity;
+  const chance = pity ? 1 : q < 0.35 ? cfg.chance[0] : q < 0.6 ? cfg.chance[1] : cfg.chance[2];
   claw.target = best;
   if (Math.random() > chance) {
     claw.dropAt = Math.max(MIN_LEN + 1, claw.len - rand(25, 65)); // escorrega logo
-  } else if (!pity && Math.random() < 0.1) {
+  } else if (!pity && Math.random() < cfg.slip) {
     claw.dropAt = MIN_LEN + rand(20, 80); // suspense!
   }
 }
@@ -275,7 +276,7 @@ function updateClaw(dt: number) {
   switch (claw.state) {
     case 'idle':
       if (input.dir) {
-        const nx = clamp(claw.x + input.dir * 160 * dt, CLAW_MIN_X, CLAW_MAX_X);
+        const nx = clamp(claw.x + input.dir * LEVELS[level].speed * dt, CLAW_MIN_X, CLAW_MAX_X);
         vx = (nx - claw.x) / dt;
         claw.x = nx;
         if (vx) hum = 85;
@@ -378,11 +379,13 @@ function updateClaw(dt: number) {
     p.va = 0;
   }
 
-  grabBtn.classList.toggle('off', claw.state !== 'idle');
+  grabBtn.classList.toggle('off', claw.state !== 'idle' || coins <= 0);
 }
 
 function grab() {
-  if (claw.state !== 'idle') return;
+  if (!playing || paused || claw.state !== 'idle' || coins <= 0) return;
+  coins--;
+  $('coins').textContent = String(coins);
   sfx.click();
   claw.state = 'down';
   claw.open = 1;
@@ -446,6 +449,15 @@ for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const)
   grabBtn.addEventListener(ev, () => grabBtn.classList.remove('active'));
 
 window.addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLInputElement) {
+    if (e.key === 'Enter') startGame();
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (paused) resume();
+    else openMenu();
+    return;
+  }
   if (e.key === 'ArrowLeft') held.kl = true;
   else if (e.key === 'ArrowRight') held.kr = true;
   else if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
@@ -479,7 +491,7 @@ document.addEventListener('visibilitychange', () => {
 // ---------- vitória / comemoração ----------
 let score = 0;
 let winT = 0;
-let refillPending = false;
+let refillTimer: number | undefined;
 const winEl = $('win');
 let winTimer: number | undefined;
 
@@ -509,12 +521,11 @@ function onWin(p: Plush) {
   navigator.vibrate?.([80, 40, 80, 40, 160]);
   burst();
 
-  if (plushes.length < 5 && !refillPending) {
-    refillPending = true;
-    window.setTimeout(() => {
+  if (plushes.length < 5 && !refillTimer) {
+    refillTimer = window.setTimeout(() => {
       spawn(8, true);
       sfx.refill();
-      refillPending = false;
+      refillTimer = undefined;
     }, 2500);
   }
 }
@@ -866,9 +877,12 @@ function frame(now: number) {
   last = now;
   time += dt;
 
-  if (started) updateClaw(dt);
-  const sub = 4;
-  for (let i = 0; i < sub; i++) physicsStep(dt / sub);
+  if (!paused) {
+    if (playing) updateClaw(dt);
+    const sub = 4;
+    for (let i = 0; i < sub; i++) physicsStep(dt / sub);
+    checkGameOver(dt);
+  }
 
   if (winT > 0) winT -= dt;
   if (signFlicker > 0) signFlicker -= dt;
@@ -884,25 +898,248 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
-// pilha inicial já assentada
-spawn(10, false);
-for (let i = 0; i < 600; i++) physicsStep(1 / 120);
+// ---------- partida, menus e ranking ----------
+let level: Level = loadLevel();
+let coins = 0;
+let playing = false;
+let paused = false;
+let overT = 0;
+let lastEntryDate = 0;
+
+const show = (id: string) => $(id).classList.remove('hidden');
+const hide = (id: string) => $(id).classList.add('hidden');
+
+function settlePile() {
+  plushes = [];
+  spawn(10, false);
+  for (let i = 0; i < 600; i++) physicsStep(1 / 120);
+}
+
+function resetClaw() {
+  Object.assign(claw, {
+    x: CHUTE_X,
+    len: MIN_LEN,
+    open: 1,
+    state: 'idle',
+    timer: 0,
+    held: null,
+    target: null,
+    dropAt: -1,
+    carried: false,
+    sway: 0,
+    swayV: 0,
+    lastVx: 0,
+  });
+}
+
+function newGame() {
+  for (const id of ['menu', 'over', 'levelMenu', 'rank', 'win', 'start']) hide(id);
+  window.clearTimeout(refillTimer);
+  refillTimer = undefined;
+  playing = false;
+  settlePile();
+  resetClaw();
+  score = 0;
+  missStreak = 0;
+  coins = LEVELS[level].fichas;
+  overT = 0;
+  parts = [];
+  $('score').textContent = '0';
+  $('coins').textContent = String(coins);
+  $('shelf').replaceChildren();
+  playing = true;
+  paused = false;
+  winT = 0.8;
+  sfx.zap();
+}
+
+// acabou quando não tem ficha, a garra parou e nada está caindo no buraco
+function checkGameOver(dt: number) {
+  const done =
+    playing &&
+    coins <= 0 &&
+    claw.state === 'idle' &&
+    !plushes.some((p) => p.x < BARRIER_X) &&
+    winEl.classList.contains('hidden');
+  overT = done ? overT + dt : 0;
+  if (overT > 1.2) endGame();
+}
+
+function endGame() {
+  playing = false;
+  overT = 0;
+  sfx.hum(0);
+  const name = loadName() || 'Jogador';
+  const date = Date.now();
+  const pos = addEntry(level, { name, score, date });
+  lastEntryDate = date;
+  const cfg = LEVELS[level];
+  $('overText').textContent = `${name} pegou ${score} ${score === 1 ? 'pelúcia' : 'pelúcias'}`;
+  $('overPlace').textContent =
+    score === 0
+      ? 'Tente de novo!'
+      : pos === 1
+        ? `🥇 RECORDE no ${cfg.label}!`
+        : pos
+          ? `${pos}º lugar no ${cfg.label}`
+          : 'Quase entrou no ranking!';
+  show('over');
+  if (pos === 1 && score > 0) {
+    burst();
+    for (const a of [0, 0.2, 0.4]) sfx.ring(a);
+  }
+}
+
+function openMenu() {
+  if (!playing || paused) return;
+  paused = true;
+  sfx.hum(0);
+  setStick(null);
+  show('menu');
+}
+
+function resume() {
+  paused = false;
+  for (const id of ['menu', 'levelMenu', 'rank']) hide(id);
+}
+
+function exitGame() {
+  playing = false;
+  paused = false;
+  sfx.hum(0);
+  setStick(null);
+  for (const id of ['menu', 'over', 'levelMenu', 'rank', 'win']) hide(id);
+  renderLevels($('levelPick'), (l) => setLevel(l));
+  show('start');
+}
+
+function setLevel(l: Level) {
+  level = l;
+  saveLevel(l);
+}
+
+function renderLevels(box: HTMLElement, onPick: (l: Level) => void) {
+  box.replaceChildren(
+    ...LEVEL_IDS.map((l) => {
+      const b = document.createElement('button');
+      b.className = `lvl${l === level ? ' on' : ''}`;
+      b.textContent = `${LEVELS[l].emoji} ${LEVELS[l].label}`;
+      b.addEventListener('click', () => {
+        sfx.click();
+        onPick(l);
+        for (const o of box.children) o.classList.toggle('on', o === b);
+      });
+      return b;
+    }),
+  );
+}
+
+let rankLevel: Level = level;
+function showRank(l: Level = level) {
+  rankLevel = l;
+  const tabs = $('rankTabs');
+  tabs.replaceChildren(
+    ...LEVEL_IDS.map((id) => {
+      const b = document.createElement('button');
+      b.className = `lvl${id === rankLevel ? ' on' : ''}`;
+      b.textContent = `${LEVELS[id].emoji} ${LEVELS[id].label}`;
+      b.addEventListener('click', () => showRank(id));
+      return b;
+    }),
+  );
+  const list = loadRank()[rankLevel];
+  const medals = ['🥇', '🥈', '🥉'];
+  const items = list.map((e, i) => {
+    const li = document.createElement('li');
+    if (e.date === lastEntryDate) li.classList.add('me');
+    const pos = document.createElement('span');
+    pos.className = 'pos';
+    pos.textContent = medals[i] ?? `${i + 1}º`;
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = e.name;
+    const pts = document.createElement('span');
+    pts.textContent = `🧸 ${e.score}`;
+    li.append(pos, who, pts);
+    return li;
+  });
+  if (!items.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'Ninguém jogou esse nível ainda';
+    items.push(li);
+  }
+  $('rankList').replaceChildren(...items);
+  show('rank');
+}
+
+// botões dos menus (data-act)
+const ACTIONS: Record<string, (el: HTMLElement) => void> = {
+  resume,
+  restart: () => newGame(),
+  level: () => {
+    renderLevels($('levelPick2'), (l) => {
+      setLevel(l);
+      window.setTimeout(newGame, 150);
+    });
+    show('levelMenu');
+  },
+  rank: () => showRank(),
+  exit: exitGame,
+  close: (el) => el.closest('.overlay')?.classList.add('hidden'),
+};
+document.addEventListener('click', (e) => {
+  const el = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
+  const act = el?.dataset.act;
+  if (!el || !act || !ACTIONS[act]) return;
+  sfx.click();
+  ACTIONS[act](el);
+});
+$('menuBtn').addEventListener('click', openMenu);
 
 // tela inicial
-const startEl = $('start');
 const startChars = $('startChars');
 for (const id of CHAR_IDS) {
-  const c = makeSprite(id, 72 * Math.min(window.devicePixelRatio || 1, 3));
+  const c = makeSprite(id, 44 * Math.min(window.devicePixelRatio || 1, 3));
   c.style.animationDelay = `${Math.random() * -1}s`;
   startChars.append(c);
 }
-$('play').addEventListener('click', () => {
+const nameInput = $<HTMLInputElement>('nameInput');
+nameInput.value = loadName();
+renderLevels($('levelPick'), (l) => setLevel(l));
+
+function startGame() {
+  const name = nameInput.value.trim();
+  if (!name) {
+    nameInput.classList.remove('shake');
+    void nameInput.offsetWidth;
+    nameInput.classList.add('shake');
+    nameInput.focus();
+    return;
+  }
+  nameInput.blur();
+  saveName(name);
   sfx.unlock();
   sfx.startMusic();
-  sfx.zap();
-  winT = 0.8;
   started = true;
-  startEl.classList.add('hidden');
-});
+  newGame();
+}
+$('play').addEventListener('click', startGame);
+
+settlePile();
 
 requestAnimationFrame(frame);
+
+// atalho de teste (só no `npm run dev`)
+if (import.meta.env.DEV) {
+  (window as unknown as { __debug: object }).__debug = {
+    setCoins: (n: number) => {
+      coins = n;
+      $('coins').textContent = String(n);
+    },
+    setScore: (n: number) => {
+      score = n;
+      $('score').textContent = String(n);
+    },
+  };
+}

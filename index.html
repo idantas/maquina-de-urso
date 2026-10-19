@@ -20,7 +20,9 @@
   <body>
     <div id="app">
       <header class="hud">
-        <div class="score">🏆 <span id="score">0</span></div>
+        <button id="menuBtn" class="mute" aria-label="Menu">☰</button>
+        <div class="score">🧸 <span id="score">0</span></div>
+        <div class="score">🪙 <span id="coins">10</span></div>
         <div id="shelf" class="shelf"></div>
         <button id="mute" class="mute" aria-label="Som">🔊</button>
       </header>
@@ -44,10 +46,52 @@
     </div>
 
     <div id="start" class="overlay">
-      <div class="card">
+      <div class="card start">
         <div class="start-title">MÁQUINA<br />DE URSO</div>
         <div id="startChars" class="start-chars"></div>
+        <input id="nameInput" class="name-input" maxlength="12" placeholder="Seu nome" autocomplete="off" enterkeyhint="go" />
+        <div id="levelPick" class="levels"></div>
         <button id="play" class="play">JOGAR ▶</button>
+        <button data-act="rank" class="link">🏆 Ranking</button>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay hidden">
+      <div class="panel pop">
+        <div class="panel-title">PAUSA</div>
+        <button data-act="resume" class="menu-btn primary">▶ Continuar</button>
+        <button data-act="restart" class="menu-btn">↻ Reiniciar</button>
+        <button data-act="level" class="menu-btn">⇅ Trocar nível</button>
+        <button data-act="rank" class="menu-btn">🏆 Ranking</button>
+        <button data-act="exit" class="menu-btn">✕ Sair do jogo</button>
+      </div>
+    </div>
+
+    <div id="over" class="overlay hidden">
+      <div class="panel pop">
+        <div class="panel-title">FIM DE JOGO</div>
+        <div id="overText" class="over-text"></div>
+        <div id="overPlace" class="over-place"></div>
+        <button data-act="restart" class="menu-btn primary">↻ Jogar de novo</button>
+        <button data-act="rank" class="menu-btn">🏆 Ranking</button>
+        <button data-act="exit" class="menu-btn">✕ Menu inicial</button>
+      </div>
+    </div>
+
+    <div id="levelMenu" class="overlay top hidden">
+      <div class="panel pop">
+        <div class="panel-title">NÍVEL</div>
+        <div id="levelPick2" class="levels col"></div>
+        <button data-act="close" class="link">voltar</button>
+      </div>
+    </div>
+
+    <div id="rank" class="overlay top hidden">
+      <div class="panel pop">
+        <div class="panel-title">🏆 RANKING</div>
+        <div id="rankTabs" class="levels"></div>
+        <ol id="rankList" class="rank-list"></ol>
+        <button data-act="close" class="menu-btn primary">Fechar</button>
       </div>
     </div>
 

@@ -180,6 +180,24 @@ export class Sfx {
     for (const a of [1.0, 1.25, 1.5, 1.75]) this.ring(a);
   }
 
+  /** Garra batendo na barra de neon */
+  bonk() {
+    this.tone(180, 0.22, { vol: 0.16, slide: 60 });
+    this.noise(0.15, 0.25, 900, 'bandpass');
+  }
+
+  /** Fase nova liberada */
+  levelUp() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.mus.gain.setTargetAtTime(0.05, t, 0.05);
+    this.mus.gain.setTargetAtTime(MUSIC_VOL, t + 3, 0.4);
+    const notes = [392, 523, 659, 784, 659, 784, 1047, 1319, 1568];
+    notes.forEach((n, i) => this.tone(n, i === notes.length - 1 ? 0.9 : 0.1, { vol: 0.11, at: i * 0.09 }));
+    for (const n of [523, 784, 1047]) this.tone(n, 1.1, { type: 'triangle', vol: 0.1, at: 0.8 });
+    for (const a of [0.9, 1.1, 1.3]) this.ring(a);
+  }
+
   refill() {
     [392, 523, 659].forEach((n, i) => this.tone(n, 0.12, { type: 'triangle', vol: 0.1, at: i * 0.08 }));
   }

@@ -14,7 +14,19 @@ export type CharId =
   | 'donnie'
   | 'mikey'
   | 'spidey'
-  | 'venom';
+  | 'venom'
+  | 'superman'
+  | 'batman'
+  | 'wonder'
+  | 'flash'
+  | 'lantern'
+  | 'aquaman'
+  | 'ironman'
+  | 'captain'
+  | 'hulk'
+  | 'thor'
+  | 'widow'
+  | 'panther';
 
 export const CHAR_IDS: CharId[] = [
   'sonic',
@@ -30,6 +42,18 @@ export const CHAR_IDS: CharId[] = [
   'mikey',
   'spidey',
   'venom',
+  'superman',
+  'batman',
+  'wonder',
+  'flash',
+  'lantern',
+  'aquaman',
+  'ironman',
+  'captain',
+  'hulk',
+  'thor',
+  'widow',
+  'panther',
 ];
 
 export const CHAR_NAMES: Record<CharId, string> = {
@@ -46,6 +70,18 @@ export const CHAR_NAMES: Record<CharId, string> = {
   mikey: 'Michelangelo',
   spidey: 'Homem-Aranha',
   venom: 'Venom',
+  superman: 'Super-Homem',
+  batman: 'Batman',
+  wonder: 'Mulher-Maravilha',
+  flash: 'Flash',
+  lantern: 'Lanterna Verde',
+  aquaman: 'Aquaman',
+  ironman: 'Homem de Ferro',
+  captain: 'Capitão América',
+  hulk: 'Hulk',
+  thor: 'Thor',
+  widow: 'Viúva Negra',
+  panther: 'Pantera Negra',
 };
 
 export const CHAR_COLORS: Record<CharId, string> = {
@@ -62,6 +98,18 @@ export const CHAR_COLORS: Record<CharId, string> = {
   mikey: '#ff9a2e',
   spidey: '#ff3b47',
   venom: '#8fa8ff',
+  superman: '#3d8bff',
+  batman: '#f2c230',
+  wonder: '#ff3b47',
+  flash: '#ff3b47',
+  lantern: '#3ddc6a',
+  aquaman: '#ff9a2e',
+  ironman: '#ffd23a',
+  captain: '#3d8bff',
+  hulk: '#6cdf3d',
+  thor: '#8fd0ff',
+  widow: '#ff3b47',
+  panther: '#b49cff',
 };
 
 type Ctx = CanvasRenderingContext2D;
@@ -587,6 +635,543 @@ function venom(c: Ctx) {
   gloves(c, black);
 }
 
+// ---------- heróis (rosto humano, estilo chibi) ----------
+
+const PEACH = '#f6cba3';
+
+function humanHead(c: Ctx, skin = PEACH) {
+  ell(c, 0, HY, HR, HR * 0.94);
+  paint(c, skin, OUTLINE, 1.6);
+}
+
+function humanFace(c: Ctx, o: { eyes?: boolean; lips?: string; angry?: boolean } = {}) {
+  if (o.eyes !== false) {
+    for (const s of [-1, 1]) {
+      ell(c, s * 8, -9, 3.6, 4.8);
+      paint(c, '#1b1b2a');
+      ell(c, s * 7, -10.8, 1.3, 1.6);
+      paint(c, '#fff');
+    }
+  }
+  if (o.angry) {
+    c.lineCap = 'round';
+    c.lineWidth = 2.4;
+    c.strokeStyle = '#1b1b2a';
+    for (const s of [-1, 1]) {
+      c.beginPath();
+      c.moveTo(s * 13, -18);
+      c.lineTo(s * 4, -14.5);
+      c.stroke();
+    }
+  }
+  c.beginPath();
+  c.moveTo(-5, 5);
+  c.quadraticCurveTo(0, 10, 5, 5);
+  c.lineWidth = 1.7;
+  c.lineCap = 'round';
+  c.strokeStyle = o.lips ?? '#7a2a1a';
+  c.stroke();
+  c.fillStyle = 'rgba(255,110,140,0.3)';
+  for (const s of [-1, 1]) {
+    ell(c, s * 14, 2, 3.5, 2);
+    c.fill();
+  }
+}
+
+function maskEyes(c: Ctx, color = '#ffffff', y = -9) {
+  for (const s of [-1, 1]) {
+    c.save();
+    c.translate(s * 8.5, y);
+    c.rotate(s * 0.28);
+    ell(c, 0, 0, 5.6, 3.4);
+    paint(c, color);
+    c.restore();
+  }
+}
+
+/** Cabelo/capacete cobrindo o topo da cabeça, com franja em `fringeY`. */
+function hairCap(c: Ctx, color: string, fringeY = -14, stroke = OUTLINE) {
+  const R = HR + 1.5;
+  const a0 = Math.PI * 0.95;
+  c.beginPath();
+  c.arc(0, HY, R, a0, Math.PI * 2.05);
+  c.quadraticCurveTo(R * 0.55, fringeY - 9, 0, fringeY);
+  c.quadraticCurveTo(-R * 0.55, fringeY - 9, Math.cos(a0) * R, HY + Math.sin(a0) * R);
+  c.closePath();
+  paint(c, color, stroke);
+}
+
+/** Máscara que cobre a cabeça até `bottomY` (o queixo fica de fora). */
+function cowl(c: Ctx, color: string, bottomY = 0) {
+  c.save();
+  clipHead(c);
+  c.beginPath();
+  c.moveTo(-HR - 2, -40);
+  c.lineTo(HR + 2, -40);
+  c.lineTo(HR + 2, bottomY);
+  c.quadraticCurveTo(0, bottomY + 9, -HR - 2, bottomY);
+  c.closePath();
+  paint(c, color);
+  c.restore();
+  ell(c, 0, HY, HR, HR * 0.94);
+  c.lineWidth = 1.6;
+  c.strokeStyle = OUTLINE;
+  c.stroke();
+}
+
+function longHair(c: Ctx, color: string) {
+  ell(c, 0, 2, HR + 5, HR + 6);
+  paint(c, color, OUTLINE);
+}
+
+function cape(c: Ctx, color: string) {
+  c.beginPath();
+  c.moveTo(-13, 6);
+  c.lineTo(13, 6);
+  c.quadraticCurveTo(22, 24, 25, 38);
+  c.quadraticCurveTo(0, 43, -25, 38);
+  c.quadraticCurveTo(-22, 24, -13, 6);
+  c.closePath();
+  paint(c, color, OUTLINE);
+}
+
+function belt(c: Ctx, color: string, y = 25) {
+  ell(c, 0, y, 15.5, 2.4);
+  paint(c, color);
+}
+
+function bolt(c: Ctx, x: number, y: number, k: number, color: string) {
+  c.beginPath();
+  c.moveTo(x + 2 * k, y - 6 * k);
+  c.lineTo(x - 3 * k, y + 0.5 * k);
+  c.lineTo(x + 0.5 * k, y + 0.5 * k);
+  c.lineTo(x - 2 * k, y + 6 * k);
+  c.lineTo(x + 3 * k, y - 1 * k);
+  c.lineTo(x - 0.5 * k, y - 1 * k);
+  c.closePath();
+  paint(c, color);
+}
+
+function batShape(c: Ctx, x: number, y: number, k: number, color: string) {
+  c.beginPath();
+  c.moveTo(x - 7 * k, y - 1 * k);
+  c.quadraticCurveTo(x - 4 * k, y - 3 * k, x - 1.5 * k, y - 1.5 * k);
+  c.lineTo(x - 1 * k, y - 3 * k);
+  c.lineTo(x, y - 2 * k);
+  c.lineTo(x + 1 * k, y - 3 * k);
+  c.lineTo(x + 1.5 * k, y - 1.5 * k);
+  c.quadraticCurveTo(x + 4 * k, y - 3 * k, x + 7 * k, y - 1 * k);
+  c.quadraticCurveTo(x + 4 * k, y + 0.5 * k, x + 3 * k, y + 2.5 * k);
+  c.quadraticCurveTo(x, y + 1 * k, x - 3 * k, y + 2.5 * k);
+  c.quadraticCurveTo(x - 4 * k, y + 0.5 * k, x - 7 * k, y - 1 * k);
+  c.closePath();
+  paint(c, color);
+}
+
+function star(c: Ctx, x: number, y: number, r: number, color: string) {
+  c.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  c.closePath();
+  paint(c, color);
+}
+
+function superman(c: Ctx) {
+  cape(c, '#d42a2a');
+  body(c, { fur: '#2463d6', stroke: '#123a8a', shoe: '#d42a2a', strap: '#a81c1c' });
+  belt(c, '#ffd23a');
+  c.beginPath();
+  c.moveTo(0, 8.5);
+  c.lineTo(8, 13);
+  c.lineTo(0, 21.5);
+  c.lineTo(-8, 13);
+  c.closePath();
+  paint(c, '#ffd23a', '#d42a2a', 1.4);
+  c.fillStyle = '#d42a2a';
+  c.font = 'bold 9px sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('S', 0, 14.5);
+  humanHead(c);
+  hairCap(c, '#1b1b2a', -15);
+  c.beginPath();
+  c.arc(-2, -16, 3, 0.2, Math.PI * 1.6);
+  c.lineWidth = 1.8;
+  c.strokeStyle = '#1b1b2a';
+  c.stroke();
+  gloves(c, '#2463d6');
+  humanFace(c);
+}
+
+function batman(c: Ctx) {
+  const dark = '#262a36';
+  cape(c, dark);
+  body(c, { fur: '#6e7484', stroke: '#3a3e4a', shoe: dark, strap: '#3a3e4a' });
+  belt(c, '#f2c230');
+  ell(c, 0, 14, 8.5, 4.6);
+  paint(c, '#f2c230');
+  batShape(c, 0, 14, 1, '#111');
+  humanHead(c);
+  for (const s of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 7, -30);
+    c.lineTo(s * 12, -45);
+    c.lineTo(s * 18, -27);
+    c.closePath();
+    paint(c, dark, OUTLINE);
+  }
+  cowl(c, dark, 0);
+  maskEyes(c);
+  c.beginPath();
+  c.moveTo(-4, 6);
+  c.quadraticCurveTo(0, 9, 4, 6);
+  c.lineWidth = 1.7;
+  c.strokeStyle = '#7a2a1a';
+  c.stroke();
+  gloves(c, dark);
+}
+
+function wonderWoman(c: Ctx) {
+  longHair(c, '#1b1b2a');
+  body(c, { fur: '#c8202c', stroke: '#7a1018', shoe: '#c8202c', strap: '#f2c230' });
+  // saia azul com estrelas
+  c.beginPath();
+  c.moveTo(-15, 25);
+  c.lineTo(15, 25);
+  c.lineTo(18, 33);
+  c.quadraticCurveTo(0, 37, -18, 33);
+  c.closePath();
+  paint(c, '#1f3fa8');
+  for (const x of [-9, 0, 9]) star(c, x, 30, 2, '#ffffff');
+  belt(c, '#f2c230', 24);
+  c.beginPath();
+  c.moveTo(-8, 12);
+  c.lineTo(-4, 18);
+  c.lineTo(0, 13);
+  c.lineTo(4, 18);
+  c.lineTo(8, 12);
+  c.lineWidth = 2.2;
+  c.strokeStyle = '#f2c230';
+  c.stroke();
+  humanHead(c);
+  hairCap(c, '#1b1b2a', -13);
+  c.beginPath();
+  c.arc(0, HY, HR - 1, Math.PI * 1.22, Math.PI * 1.78);
+  c.lineWidth = 3.5;
+  c.strokeStyle = '#f2c230';
+  c.stroke();
+  star(c, 0, -31, 3.5, '#d42a2a');
+  gloves(c, PEACH, 7, (s) => {
+    ell(c, s * 17.5, 17.5, 5.5, 2.6, s * 0.4);
+    paint(c, '#cfd3e0');
+  });
+  humanFace(c, { lips: '#c8202c' });
+}
+
+function flash(c: Ctx) {
+  const red = '#d4212b';
+  body(c, { fur: red, stroke: '#7a1018', shoe: '#f2c230', strap: '#d4a020' });
+  belt(c, '#f2c230');
+  ell(c, 0, 15, 6.5, 6.5);
+  paint(c, '#ffffff', '#f2c230', 1.4);
+  bolt(c, 0, 15, 0.9, '#f2c230');
+  humanHead(c);
+  cowl(c, red, 1);
+  for (const s of [-1, 1]) {
+    c.save();
+    c.translate(s * 25, -12);
+    c.scale(s, 1);
+    c.beginPath();
+    c.moveTo(0, -4);
+    c.lineTo(9, -10);
+    c.lineTo(5, -3);
+    c.lineTo(11, -4);
+    c.lineTo(1, 4);
+    c.closePath();
+    paint(c, '#f2c230', OUTLINE, 1);
+    c.restore();
+  }
+  maskEyes(c);
+  c.beginPath();
+  c.moveTo(-5, 6);
+  c.quadraticCurveTo(0, 10, 5, 6);
+  c.lineWidth = 1.7;
+  c.strokeStyle = '#7a2a1a';
+  c.stroke();
+  gloves(c, red);
+}
+
+function lantern(c: Ctx) {
+  const green = '#2fa84f';
+  body(c, { fur: '#1c1c22', stroke: '#000', belly: green, shoe: green, strap: '#1c1c22' });
+  ell(c, 0, 15, 6, 6);
+  paint(c, '#ffffff');
+  ell(c, 0, 15, 4, 4);
+  c.lineWidth = 1.6;
+  c.strokeStyle = green;
+  c.stroke();
+  c.fillStyle = green;
+  c.fillRect(-4.5, 12.5, 9, 1.5);
+  c.fillRect(-4.5, 16, 9, 1.5);
+  humanHead(c);
+  hairCap(c, '#5a3a22', -16);
+  // máscara de dominó verde
+  c.beginPath();
+  c.moveTo(-17, -12);
+  c.quadraticCurveTo(0, -18, 17, -12);
+  c.quadraticCurveTo(15, -3, 6, -5);
+  c.quadraticCurveTo(0, -8, -6, -5);
+  c.quadraticCurveTo(-15, -3, -17, -12);
+  c.closePath();
+  paint(c, green);
+  maskEyes(c, '#ffffff', -10);
+  gloves(c, green);
+  humanFace(c, { eyes: false });
+}
+
+function aquaman(c: Ctx) {
+  const blond = '#e0a83a';
+  longHair(c, blond);
+  body(c, { fur: '#e8892a', stroke: '#9a5410', shoe: '#2f8f4a', strap: '#f2c230' });
+  // escamas
+  c.save();
+  ell(c, 0, 20, 17, 15);
+  c.clip();
+  c.strokeStyle = 'rgba(160,80,10,0.55)';
+  c.lineWidth = 1;
+  for (let y = 8; y < 26; y += 4.5) {
+    for (let x = -16 + ((y / 4.5) % 2) * 3; x < 17; x += 6) {
+      c.beginPath();
+      c.arc(x, y, 3, 0, Math.PI);
+      c.stroke();
+    }
+  }
+  c.fillStyle = '#2f8f4a';
+  c.fillRect(-20, 26, 40, 12);
+  c.restore();
+  belt(c, '#f2c230', 26);
+  humanHead(c);
+  hairCap(c, blond, -14);
+  // barba
+  c.beginPath();
+  c.moveTo(-18, -2);
+  c.quadraticCurveTo(-16, 16, 0, 17);
+  c.quadraticCurveTo(16, 16, 18, -2);
+  c.quadraticCurveTo(10, 4, 0, 3);
+  c.quadraticCurveTo(-10, 4, -18, -2);
+  c.closePath();
+  paint(c, blond);
+  gloves(c, PEACH);
+  humanFace(c, { lips: '#5a2a10' });
+}
+
+function ironMan(c: Ctx) {
+  const red = '#c21d1d';
+  const gold = '#e8b23a';
+  body(c, { fur: red, stroke: '#6e0e0e', shoe: gold, strap: red });
+  ell(c, 0, 15, 5, 5);
+  paint(c, '#bff6ff', '#7fd8ff', 1.6);
+  belt(c, gold);
+  ell(c, 0, HY, HR, HR * 0.94);
+  paint(c, red, '#6e0e0e', 1.8);
+  // máscara dourada
+  c.beginPath();
+  c.moveTo(-15, -20);
+  c.quadraticCurveTo(0, -24, 15, -20);
+  c.lineTo(13, 4);
+  c.quadraticCurveTo(0, 14, -13, 4);
+  c.closePath();
+  paint(c, gold, '#9a7414', 1.2);
+  for (const s of [-1, 1]) {
+    c.save();
+    c.translate(s * 7, -9);
+    c.rotate(s * 0.15);
+    c.fillStyle = '#e8fbff';
+    c.shadowColor = '#7fd8ff';
+    c.shadowBlur = 4;
+    c.fillRect(-4.5, -1.6, 9, 3.2);
+    c.restore();
+  }
+  c.fillStyle = '#9a7414';
+  c.fillRect(-5, 5, 10, 1.4);
+  gloves(c, red);
+}
+
+function captain(c: Ctx) {
+  const blue = '#2a4fb8';
+  body(c, { fur: blue, stroke: '#14306e', shoe: '#c8202c', strap: '#7a4a22' });
+  c.save();
+  ell(c, 0, 20, 17, 15);
+  c.clip();
+  for (let i = 0; i < 4; i++) {
+    c.fillStyle = i % 2 ? '#ffffff' : '#c8202c';
+    c.fillRect(-10, 21 + i * 3, 20, 3);
+  }
+  c.restore();
+  star(c, 0, 14, 5.5, '#ffffff');
+  humanHead(c);
+  // capacete azul com "A" e asinhas
+  c.save();
+  clipHead(c);
+  c.beginPath();
+  c.moveTo(-HR - 2, -40);
+  c.lineTo(HR + 2, -40);
+  c.lineTo(HR + 2, 8);
+  c.lineTo(17, 8);
+  c.lineTo(17, -15);
+  c.quadraticCurveTo(0, -20, -17, -15);
+  c.lineTo(-17, 8);
+  c.lineTo(-HR - 2, 8);
+  c.closePath();
+  paint(c, blue);
+  c.restore();
+  ell(c, 0, HY, HR, HR * 0.94);
+  c.lineWidth = 1.6;
+  c.strokeStyle = OUTLINE;
+  c.stroke();
+  c.fillStyle = '#ffffff';
+  c.font = 'bold 11px sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('A', 0, -25);
+  for (const s of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 18, -10);
+    c.lineTo(s * 26, -18);
+    c.lineTo(s * 24, -12);
+    c.lineTo(s * 28, -12);
+    c.lineTo(s * 20, -5);
+    c.closePath();
+    paint(c, '#ffffff', OUTLINE, 1);
+  }
+  gloves(c, '#c8202c');
+  humanFace(c);
+}
+
+function hulk(c: Ctx) {
+  const green = '#6cbf3d';
+  const st = '#2f6a14';
+  body(c, { fur: green, stroke: st, shoe: green, strap: st });
+  // shorts roxo rasgado
+  c.beginPath();
+  c.moveTo(-16, 24);
+  c.lineTo(16, 24);
+  c.lineTo(17, 32);
+  for (let x = 17; x > -17; x -= 4) c.lineTo(x - 2, x % 8 ? 35 : 31);
+  c.closePath();
+  paint(c, '#7a3fb0');
+  humanHead(c, green);
+  hairCap(c, '#1b1b2a', -15);
+  for (const d of [-150, -120, -60, -30]) spike(c, d, 6, 4, '#1b1b2a', undefined, HR * 0.85);
+  gloves(c, green, 9);
+  humanFace(c, { angry: true, lips: '#1f4a0a' });
+}
+
+function thor(c: Ctx) {
+  const blond = '#e9c04a';
+  cape(c, '#c8202c');
+  longHair(c, blond);
+  body(c, { fur: '#3b4150', stroke: '#1c2028', shoe: '#3b4150', strap: '#cfd3e0' });
+  for (const [x, y] of [
+    [-6, 13],
+    [6, 13],
+    [-6, 20],
+    [6, 20],
+  ]) {
+    ell(c, x, y, 2.6, 2.6);
+    paint(c, '#cfd3e0');
+  }
+  humanHead(c);
+  hairCap(c, blond, -14);
+  // capacete com asinhas
+  c.beginPath();
+  c.arc(0, HY, HR + 2, Math.PI * 1.2, Math.PI * 1.8);
+  c.lineWidth = 6;
+  c.strokeStyle = '#cfd3e0';
+  c.stroke();
+  for (const s of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 18, -26);
+    c.quadraticCurveTo(s * 30, -40, s * 34, -30);
+    c.quadraticCurveTo(s * 28, -30, s * 21, -22);
+    c.closePath();
+    paint(c, '#ffffff', OUTLINE, 1);
+  }
+  // martelo
+  c.fillStyle = '#7a4a22';
+  c.fillRect(22, 18, 3, 14);
+  c.beginPath();
+  c.rect(16, 10, 15, 9);
+  paint(c, '#9aa3b5', '#4a5060', 1.2);
+  gloves(c, PEACH);
+  humanFace(c);
+}
+
+function widow(c: Ctx) {
+  const red = '#c8382a';
+  ell(c, 0, -2, HR + 4, HR + 2);
+  paint(c, red, OUTLINE);
+  body(c, { fur: '#1c1c24', stroke: '#000', shoe: '#1c1c24', strap: '#5a5a66' });
+  belt(c, '#5a5a66');
+  c.beginPath();
+  c.moveTo(-3, 22);
+  c.lineTo(3, 22);
+  c.lineTo(-3, 28);
+  c.lineTo(3, 28);
+  c.closePath();
+  paint(c, '#e0242f');
+  humanHead(c);
+  hairCap(c, red, -13);
+  gloves(c, '#1c1c24');
+  humanFace(c, { lips: '#c8202c' });
+}
+
+function panther(c: Ctx) {
+  const black = '#1c1c24';
+  const line = '#a99cff';
+  body(c, { fur: black, stroke: '#000', shoe: black, strap: line });
+  // colar prateado
+  for (let i = -3; i <= 3; i++) {
+    c.beginPath();
+    c.moveTo(i * 3.5 - 1.5, 7.5 + Math.abs(i) * -0.6);
+    c.lineTo(i * 3.5 + 1.5, 7.5 + Math.abs(i) * -0.6);
+    c.lineTo(i * 3.5, 11.5 - Math.abs(i) * 0.6);
+    c.closePath();
+    paint(c, '#cfd3e0');
+  }
+  c.strokeStyle = line;
+  c.lineWidth = 1;
+  for (const s of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 4, 13);
+    c.lineTo(s * 10, 24);
+    c.stroke();
+  }
+  for (const s of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 9, -29);
+    c.quadraticCurveTo(s * 15, -40, s * 20, -26);
+    c.closePath();
+    paint(c, black, OUTLINE);
+  }
+  ell(c, 0, HY, HR, HR * 0.94);
+  paint(c, black, '#000', 1.6);
+  c.strokeStyle = line;
+  c.lineWidth = 1.1;
+  c.beginPath();
+  c.moveTo(-10, -26);
+  c.lineTo(0, -17);
+  c.lineTo(10, -26);
+  c.moveTo(0, -17);
+  c.lineTo(0, -4);
+  c.stroke();
+  maskEyes(c, '#ffffff', -10);
+  gloves(c, black);
+}
+
 const DRAW: Record<CharId, (c: Ctx) => void> = {
   sonic,
   tails,
@@ -601,6 +1186,18 @@ const DRAW: Record<CharId, (c: Ctx) => void> = {
   mikey: (c) => turtle(c, '#f28a1e'),
   spidey,
   venom,
+  superman,
+  batman,
+  wonder: wonderWoman,
+  flash,
+  lantern,
+  aquaman,
+  ironman: ironMan,
+  captain,
+  hulk,
+  thor,
+  widow,
+  panther,
 };
 
 export function drawCharacter(c: Ctx, id: CharId) {
@@ -622,5 +1219,16 @@ export function makeSprite(id: CharId, px: number): HTMLCanvasElement {
   c.scale(size / SPRITE_BOX, size / SPRITE_BOX);
   c.translate(SPRITE_BOX / 2, SPRITE_BOX / 2 - 4);
   drawCharacter(c, id);
+  return cv;
+}
+
+/** Silhueta escura (personagem ainda bloqueado). */
+export function makeSilhouette(id: CharId, px: number): HTMLCanvasElement {
+  const cv = makeSprite(id, px);
+  const c = cv.getContext('2d')!;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-in';
+  c.fillStyle = '#5a4d8a';
+  c.fillRect(0, 0, cv.width, cv.height);
   return cv;
 }

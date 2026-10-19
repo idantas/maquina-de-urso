@@ -1,5 +1,7 @@
 import './style.css';
-import { CHAR_COLORS, CHAR_IDS, CHAR_NAMES, SPRITE_BOX, makeSprite, type CharId } from './characters';
+import { CHAR_COLORS, CHAR_IDS, CHAR_NAMES, SPRITE_BOX, makeSilhouette, makeSprite, type CharId } from './characters';
+import { STAGES, loadStage, loadUnlocked, saveStage, saveUnlocked } from './stages';
+import { drawBg } from './backgrounds';
 import { Sfx } from './audio';
 import { LEVELS, LEVEL_IDS, addEntry, loadLevel, loadName, loadRank, saveLevel, saveName, type Level } from './rank';
 
@@ -82,7 +84,8 @@ function shuffle<T>(arr: T[]): T[] {
 
 function spawn(n: number, fromTop: boolean) {
   // cada personagem aparece uma vez antes de repetir
-  const bag = [...shuffle([...CHAR_IDS]), ...shuffle([...CHAR_IDS])].slice(0, n);
+  const ids = STAGES[stageIdx].chars;
+  const bag = [...shuffle([...ids]), ...shuffle([...ids])].slice(0, n);
   bag.forEach((char, i) => {
     const r = rand(30, 33);
     plushes.push({
@@ -229,6 +232,34 @@ const claw = {
 };
 let missStreak = 0;
 
+// barras de neon que vão e voltam (fases 2+)
+let obsT = 0;
+let bonkT = 0;
+
+function obstacleRects() {
+  return STAGES[stageIdx].obstacles.map((o) => {
+    const L = GR - GL - o.w;
+    let p = (obsT * o.speed + o.phase * 2 * L) % (2 * L);
+    if (p > L) p = 2 * L - p;
+    return { x: GL + p, y: o.y, w: o.w, h: 10 };
+  });
+}
+
+function clawHitsObstacle() {
+  const hx = hubX();
+  const hy = hubY();
+  const half = 10 + 26 * Math.sin(0.25 + 0.6 * claw.open);
+  return obstacleRects().some((r) => hx + half > r.x && hx - half < r.x + r.w && hy + 46 > r.y && hy - 14 < r.y + r.h);
+}
+
+function plushHitsObstacle(p: Plush) {
+  return obstacleRects().some((r) => {
+    const dx = p.x - clamp(p.x, r.x, r.x + r.w);
+    const dy = p.y - clamp(p.y, r.y, r.y + r.h);
+    return dx * dx + dy * dy < p.r * p.r * 0.7;
+  });
+}
+
 const hubY = () => HUB_BASE + claw.len;
 const hubX = () => claw.x + claw.sway;
 
@@ -285,6 +316,17 @@ function updateClaw(dt: number) {
     case 'down': {
       claw.len += 210 * dt;
       hum = 140;
+      if (clawHitsObstacle()) {
+        // bateu na barra: volta vazia
+        bonkT = 0.4;
+        sfx.bonk();
+        claw.target = null;
+        claw.dropAt = -1;
+        claw.carried = false;
+        claw.state = 'up';
+        claw.timer = 0.15;
+        break;
+      }
       let stop = hubY() >= MAX_HUB_Y;
       if (stop) claw.len = MAX_HUB_Y - HUB_BASE;
       const hx = hubX();
@@ -318,6 +360,12 @@ function updateClaw(dt: number) {
       }
       claw.len -= 170 * dt;
       hum = 170;
+      if (claw.held && plushHitsObstacle(claw.held)) {
+        bonkT = 0.4;
+        sfx.bonk();
+        release(0);
+        sfx.drop();
+      }
       if (claw.held && claw.dropAt >= 0 && claw.len <= claw.dropAt) {
         release(0);
         sfx.drop();
@@ -497,8 +545,12 @@ let winTimer: number | undefined;
 
 function onWin(p: Plush) {
   score++;
-  $('score').textContent = String(score);
   missStreak = 0;
+  if (!cleared && score >= STAGES[stageIdx].goal) {
+    cleared = true;
+    pendingClear = true;
+  }
+  updateScoreHud();
   winT = 3.5;
 
   const mini = makeSprite(p.char, 40 * dpr);
@@ -532,6 +584,10 @@ function onWin(p: Plush) {
 
 function hideWin() {
   winEl.classList.add('hidden');
+  if (pendingClear) {
+    pendingClear = false;
+    showClear();
+  }
 }
 winEl.addEventListener('pointerdown', hideWin);
 
@@ -649,7 +705,7 @@ let signFlicker = 0;
 let nextFlicker = rand(4, 9);
 
 function neonHue(t: number) {
-  return winT > 0 ? (t * 540) % 360 : 268 + Math.sin(t * 1.2) * 24;
+  return winT > 0 ? (t * 540) % 360 : STAGES[stageIdx].hue + Math.sin(t * 1.2) * 20;
 }
 
 function drawCabinet() {
@@ -662,13 +718,16 @@ function drawSign(t: number) {
   const flick = signFlicker > 0 && Math.floor(t * 30) % 2 === 0;
   ctx.save();
   ctx.globalAlpha = flick ? 0.25 : 1;
+  const text = STAGES[stageIdx].sign;
   ctx.font = '26px Bungee, system-ui, sans-serif';
+  const fit = Math.min(1, 320 / ctx.measureText(text).width);
+  ctx.font = `${Math.floor(26 * fit)}px Bungee, system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = winT > 0 ? `hsl(${neonHue(t)},100%,60%)` : '#3ab4ff';
+  ctx.shadowColor = `hsl(${neonHue(t)},100%,60%)`;
   ctx.shadowBlur = 16;
   ctx.fillStyle = '#eaf6ff';
-  ctx.fillText('MÁQUINA DE URSO', 200, 54);
+  ctx.fillText(text, 200, 54);
   ctx.restore();
 }
 
@@ -677,8 +736,10 @@ function drawInterior(t: number) {
   rr(ctx, GL, GT, GR - GL, GB - GT, 10);
   ctx.clip();
 
-  ctx.fillStyle = '#0d1430';
-  ctx.fillRect(GL, GT, GR - GL, GB - GT);
+  ctx.save();
+  ctx.translate(GL, GT);
+  drawBg(ctx, STAGES[stageIdx].bg, GR - GL, GB - GT, t);
+  ctx.restore();
 
   // trilho
   ctx.fillStyle = '#3a4258';
@@ -698,11 +759,29 @@ function drawInterior(t: number) {
   if (claw.held) drawPlush(claw.held);
 
   drawClaw(t);
+  drawObstacles(t);
 
   // acrílico
   ctx.fillStyle = 'rgba(180,220,255,0.14)';
   ctx.fillRect(BARRIER_X - 3, BARRIER_TOP, 6, FLOOR_Y - BARRIER_TOP);
   ctx.restore();
+}
+
+function drawObstacles(t: number) {
+  const hue = neonHue(t) + 180;
+  for (const r of obstacleRects()) {
+    ctx.save();
+    rr(ctx, r.x, r.y, r.w, r.h, r.h / 2);
+    ctx.shadowColor = bonkT > 0 ? '#ffffff' : `hsl(${hue},100%,60%)`;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = bonkT > 0 ? '#ffffff' : `hsl(${hue},100%,62%)`;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    rr(ctx, r.x + 3, r.y + 3, r.w - 6, r.h - 6, (r.h - 6) / 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawPlush(p: Plush) {
@@ -884,6 +963,8 @@ function frame(now: number) {
     checkGameOver(dt);
   }
 
+  if (playing && !paused) obsT += dt;
+  if (bonkT > 0) bonkT -= dt;
   if (winT > 0) winT -= dt;
   if (signFlicker > 0) signFlicker -= dt;
   nextFlicker -= dt;
@@ -905,6 +986,14 @@ let playing = false;
 let paused = false;
 let overT = 0;
 let lastEntryDate = 0;
+let stageIdx = loadStage();
+let unlocked = loadUnlocked();
+let cleared = false;
+let pendingClear = false;
+
+function updateScoreHud() {
+  $('score').textContent = cleared ? `${score} ✓` : `${score}/${STAGES[stageIdx].goal}`;
+}
 
 const show = (id: string) => $(id).classList.remove('hidden');
 const hide = (id: string) => $(id).classList.add('hidden');
@@ -933,7 +1022,7 @@ function resetClaw() {
 }
 
 function newGame() {
-  for (const id of ['menu', 'over', 'levelMenu', 'rank', 'win', 'start']) hide(id);
+  for (const id of ['menu', 'over', 'levelMenu', 'stageMenu', 'rank', 'win', 'clear', 'start']) hide(id);
   window.clearTimeout(refillTimer);
   refillTimer = undefined;
   playing = false;
@@ -943,8 +1032,11 @@ function newGame() {
   missStreak = 0;
   coins = LEVELS[level].fichas;
   overT = 0;
+  obsT = 0;
+  cleared = false;
+  pendingClear = false;
   parts = [];
-  $('score').textContent = '0';
+  updateScoreHud();
   $('coins').textContent = String(coins);
   $('shelf').replaceChildren();
   playing = true;
@@ -983,6 +1075,8 @@ function endGame() {
         : pos
           ? `${pos}º lugar no ${cfg.label}`
           : 'Quase entrou no ranking!';
+  const missing = STAGES[stageIdx].goal - score;
+  $('overGoal').textContent = cleared ? '' : `Faltou ${missing} pra passar de fase`;
   show('over');
   if (pos === 1 && score > 0) {
     burst();
@@ -1000,7 +1094,7 @@ function openMenu() {
 
 function resume() {
   paused = false;
-  for (const id of ['menu', 'levelMenu', 'rank']) hide(id);
+  for (const id of ['menu', 'levelMenu', 'stageMenu', 'rank', 'clear']) hide(id);
 }
 
 function exitGame() {
@@ -1008,8 +1102,10 @@ function exitGame() {
   paused = false;
   sfx.hum(0);
   setStick(null);
-  for (const id of ['menu', 'over', 'levelMenu', 'rank', 'win']) hide(id);
+  for (const id of ['menu', 'over', 'levelMenu', 'stageMenu', 'rank', 'win', 'clear']) hide(id);
   renderLevels($('levelPick'), (l) => setLevel(l));
+  renderStages($('stagePick'), (i) => setStage(i));
+  renderAlbum();
   show('start');
 }
 
@@ -1032,6 +1128,91 @@ function renderLevels(box: HTMLElement, onPick: (l: Level) => void) {
       return b;
     }),
   );
+}
+
+function setStage(i: number) {
+  stageIdx = i;
+  saveStage(i);
+}
+
+function renderStages(box: HTMLElement, onPick: (i: number) => void) {
+  box.replaceChildren(
+    ...STAGES.map((st, i) => {
+      const b = document.createElement('button');
+      const locked = i > unlocked;
+      b.className = `stage-card${i === stageIdx ? ' on' : ''}${locked ? ' locked' : ''}`;
+      const thumb = document.createElement('canvas');
+      const k = Math.min(window.devicePixelRatio || 1, 3);
+      thumb.width = 84 * k;
+      thumb.height = 56 * k;
+      const c = thumb.getContext('2d')!;
+      c.scale((84 * k) / (GR - GL), (84 * k) / (GR - GL));
+      drawBg(c, st.bg, GR - GL, 220, 3);
+      const label = document.createElement('span');
+      label.textContent = locked ? '🔒' : st.name;
+      b.append(thumb, label);
+      b.addEventListener('click', () => {
+        if (locked) {
+          sfx.bonk();
+          b.classList.remove('shake');
+          void b.offsetWidth;
+          b.classList.add('shake');
+          return;
+        }
+        sfx.click();
+        onPick(i);
+        for (const o of box.children) o.classList.toggle('on', o === b);
+      });
+      return b;
+    }),
+  );
+}
+
+/** Álbum: personagens das fases liberadas aparecem, os outros ficam em silhueta. */
+function renderAlbum() {
+  const k = Math.min(window.devicePixelRatio || 1, 3);
+  const open = new Set(STAGES.slice(0, unlocked + 1).flatMap((st) => st.chars));
+  $('startChars').replaceChildren(
+    ...CHAR_IDS.map((id) => {
+      const c = open.has(id) ? makeSprite(id, 30 * k) : makeSilhouette(id, 30 * k);
+      c.title = open.has(id) ? CHAR_NAMES[id] : '???';
+      if (open.has(id)) c.style.animationDelay = `${Math.random() * -1}s`;
+      else c.classList.add('locked');
+      return c;
+    }),
+  );
+}
+
+function showClear() {
+  const next = stageIdx + 1;
+  const hasNext = next < STAGES.length;
+  const isNew = hasNext && next > unlocked;
+  if (isNew) {
+    unlocked = next;
+    saveUnlocked(next);
+  }
+  paused = true;
+  sfx.hum(0);
+  $('clearText').textContent = !hasNext
+    ? 'Você completou todas as fases! 🏆'
+    : isNew
+      ? `Nova fase liberada: ${STAGES[next].emoji} ${STAGES[next].name}!`
+      : `Próxima fase: ${STAGES[next].emoji} ${STAGES[next].name}`;
+  const k = Math.min(window.devicePixelRatio || 1, 3);
+  $('clearChars').replaceChildren(...(hasNext ? STAGES[next].chars.map((id) => makeSprite(id, 56 * k)) : []));
+  $('nextStage').classList.toggle('hidden', !hasNext);
+  show('clear');
+  burst();
+  sfx.levelUp();
+}
+
+function goNextStage() {
+  // a partida até aqui entra no ranking antes de trocar de fase
+  const date = Date.now();
+  addEntry(level, { name: loadName() || 'Jogador', score, date });
+  lastEntryDate = date;
+  setStage(Math.min(stageIdx + 1, unlocked));
+  newGame();
 }
 
 let rankLevel: Level = level;
@@ -1085,6 +1266,14 @@ const ACTIONS: Record<string, (el: HTMLElement) => void> = {
     show('levelMenu');
   },
   rank: () => showRank(),
+  stage: () => {
+    renderStages($('stagePick2'), (i) => {
+      setStage(i);
+      window.setTimeout(newGame, 150);
+    });
+    show('stageMenu');
+  },
+  nextStage: goNextStage,
   exit: exitGame,
   close: (el) => el.closest('.overlay')?.classList.add('hidden'),
 };
@@ -1098,12 +1287,8 @@ document.addEventListener('click', (e) => {
 $('menuBtn').addEventListener('click', openMenu);
 
 // tela inicial
-const startChars = $('startChars');
-for (const id of CHAR_IDS) {
-  const c = makeSprite(id, 44 * Math.min(window.devicePixelRatio || 1, 3));
-  c.style.animationDelay = `${Math.random() * -1}s`;
-  startChars.append(c);
-}
+renderAlbum();
+renderStages($('stagePick'), (i) => setStage(i));
 const nameInput = $<HTMLInputElement>('nameInput');
 nameInput.value = loadName();
 renderLevels($('levelPick'), (l) => setLevel(l));
@@ -1139,7 +1324,17 @@ if (import.meta.env.DEV) {
     },
     setScore: (n: number) => {
       score = n;
-      $('score').textContent = String(n);
+      updateScoreHud();
+    },
+    stage: (i: number) => {
+      unlocked = Math.max(unlocked, i);
+      setStage(i);
+      newGame();
+    },
+    clear: () => {
+      cleared = true;
+      updateScoreHud();
+      showClear();
     },
   };
 }

@@ -51,6 +51,7 @@
         <div id="startChars" class="start-chars"></div>
         <input id="nameInput" class="name-input" maxlength="12" placeholder="Seu nome" autocomplete="off" enterkeyhint="go" />
         <div id="levelPick" class="levels"></div>
+        <div id="stagePick" class="stages"></div>
         <button id="play" class="play">JOGAR ▶</button>
         <button data-act="rank" class="link">🏆 Ranking</button>
       </div>
@@ -61,6 +62,7 @@
         <div class="panel-title">PAUSA</div>
         <button data-act="resume" class="menu-btn primary">▶ Continuar</button>
         <button data-act="restart" class="menu-btn">↻ Reiniciar</button>
+        <button data-act="stage" class="menu-btn">🗺️ Trocar fase</button>
         <button data-act="level" class="menu-btn">⇅ Trocar nível</button>
         <button data-act="rank" class="menu-btn">🏆 Ranking</button>
         <button data-act="exit" class="menu-btn">✕ Sair do jogo</button>
@@ -72,6 +74,7 @@
         <div class="panel-title">FIM DE JOGO</div>
         <div id="overText" class="over-text"></div>
         <div id="overPlace" class="over-place"></div>
+        <div id="overGoal" class="hint"></div>
         <button data-act="restart" class="menu-btn primary">↻ Jogar de novo</button>
         <button data-act="rank" class="menu-btn">🏆 Ranking</button>
         <button data-act="exit" class="menu-btn">✕ Menu inicial</button>
@@ -83,6 +86,24 @@
         <div class="panel-title">NÍVEL</div>
         <div id="levelPick2" class="levels col"></div>
         <button data-act="close" class="link">voltar</button>
+      </div>
+    </div>
+
+    <div id="stageMenu" class="overlay top hidden">
+      <div class="panel pop">
+        <div class="panel-title">FASES</div>
+        <div id="stagePick2" class="stages"></div>
+        <button data-act="close" class="link">voltar</button>
+      </div>
+    </div>
+
+    <div id="clear" class="overlay hidden">
+      <div class="panel pop">
+        <div class="panel-title">FASE COMPLETA!</div>
+        <div id="clearText" class="over-place"></div>
+        <div id="clearChars" class="start-chars clear-chars"></div>
+        <button id="nextStage" data-act="nextStage" class="menu-btn primary">Próxima fase ▶</button>
+        <button data-act="resume" class="menu-btn">Continuar jogando</button>
       </div>
     </div>
 
